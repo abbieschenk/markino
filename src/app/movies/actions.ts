@@ -2,10 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { movies, users, watchEntries, watchEntryParticipants } from "@/db/schema";
+import {
+  movieRankings,
+  movies,
+  users,
+  watchEntries,
+  watchEntryParticipants,
+} from "@/db/schema";
 import { auth } from "@/lib/auth";
 
 const VALID_STATUSES = new Set(["watched", "dnf", "dns"] as const);
@@ -148,9 +154,89 @@ export async function addMovieEntry(
   }
 
   revalidatePath("/movies");
+  revalidatePath("/");
 
   return {
     status: "success",
     message: "Movie entry saved.",
+  };
+}
+
+export async function deleteMovieEntry(
+  watchEntryId: string,
+): Promise<{ status: "error" | "success"; message: string | null }> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session?.user?.id) {
+    return {
+      status: "error",
+      message: "You must be signed in to delete a movie.",
+    };
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      const watchEntry = await tx.query.watchEntries.findFirst({
+        where: eq(watchEntries.id, watchEntryId),
+        columns: {
+          id: true,
+          userId: true,
+          movieId: true,
+        },
+      });
+
+      if (!watchEntry) {
+        throw new Error("WATCH_ENTRY_NOT_FOUND");
+      }
+
+      if (watchEntry.userId === session.user.id) {
+        await tx.delete(watchEntries).where(eq(watchEntries.id, watchEntry.id));
+      } else {
+        const participantLink = await tx.query.watchEntryParticipants.findFirst({
+          where: and(
+            eq(watchEntryParticipants.watchEntryId, watchEntry.id),
+            eq(watchEntryParticipants.userId, session.user.id),
+          ),
+          columns: {
+            userId: true,
+          },
+        });
+
+        if (!participantLink) {
+          throw new Error("WATCH_ENTRY_FORBIDDEN");
+        }
+
+        await tx.delete(watchEntryParticipants).where(
+          and(
+            eq(watchEntryParticipants.watchEntryId, watchEntry.id),
+            eq(watchEntryParticipants.userId, session.user.id),
+          ),
+        );
+      }
+
+      await tx.delete(movieRankings).where(
+        and(
+          eq(movieRankings.userId, session.user.id),
+          eq(movieRankings.movieId, watchEntry.movieId),
+        ),
+      );
+    });
+  } catch (error) {
+    console.error("Failed to delete movie entry", error);
+
+    return {
+      status: "error",
+      message: "Unable to delete the movie entry.",
+    };
+  }
+
+  revalidatePath("/movies");
+  revalidatePath("/");
+
+  return {
+    status: "success",
+    message: null,
   };
 }

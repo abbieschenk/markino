@@ -9,6 +9,8 @@ export type WatchStatus = "watched" | "dnf" | "dns";
 
 export type MovieLedgerEntry = {
   id: string;
+  movieId: string;
+  watchEntryId: string;
   rank: number;
   title: string;
   watchedOn: string;
@@ -108,6 +110,8 @@ function mapLedgerEntry(
 ): MovieLedgerEntry {
   return {
     id: entry.movieId,
+    movieId: entry.movieId,
+    watchEntryId: entry.id,
     rank,
     title: entry.movie.title,
     watchedOn: entry.watchedOn,

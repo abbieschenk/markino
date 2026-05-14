@@ -140,6 +140,8 @@ export function MovieDataTable({ columns, data }: MovieDataTableProps) {
                             ? "w-24"
                             : header.column.id === "watchedWith"
                               ? "w-56"
+                              : header.column.id === "actions"
+                                ? "w-24"
                               : undefined
                   }
                 >

@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ColumnDef, FilterFn } from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { DeleteMovieButton } from "@/components/movies/DeleteMovieButton";
 import { cn } from "@/lib/utils";
 import type { MovieLedgerEntry } from "@/lib/movies";
 
@@ -125,5 +126,19 @@ export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
       const rightValue = right.getValue<string[]>(columnId).join(", ");
       return leftValue.localeCompare(rightValue, "en");
     },
+  },
+  {
+    id: "actions",
+    header: "",
+    cell: ({ row }) => (
+      <div className="flex justify-end">
+        <DeleteMovieButton
+          title={row.original.title}
+          watchEntryId={row.original.watchEntryId}
+        />
+      </div>
+    ),
+    enableSorting: false,
+    enableColumnFilter: false,
   },
 ];
