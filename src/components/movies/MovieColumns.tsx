@@ -55,7 +55,10 @@ export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
       </Button>
     ),
     cell: ({ row }) => (
-      <Link href={`/movies/${row.original.id}`} className="font-medium hover:underline">
+      <Link
+        href={`/movies/${row.original.id}`}
+        className="font-medium hover:underline"
+      >
         {row.getValue("title")}
       </Link>
     ),
@@ -135,9 +138,7 @@ export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
     cell: ({ row }) => {
       const watchedWith = row.getValue<string[]>("watchedWith");
       return (
-        <span className="text-muted-foreground">
-          {watchedWith.length > 0 ? watchedWith.join(", ") : "Solo"}
-        </span>
+        <span className="text-muted-foreground">{watchedWith.join(", ")}</span>
       );
     },
     filterFn: watchedWithFilter,

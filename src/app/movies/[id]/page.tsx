@@ -82,9 +82,7 @@ export default async function MovieDetailPage({
         <div className="border-b border-[var(--border)] px-4 py-3 text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--muted-foreground)]">
           Watched With
         </div>
-        <div className="px-4 py-3 text-sm">
-          {movie.watchedWith.length > 0 ? movie.watchedWith.join(", ") : "Solo"}
-        </div>
+        <div className="px-4 py-3 text-sm">{movie.watchedWith.join(", ")}</div>
       </section>
     </section>
   );

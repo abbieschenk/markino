@@ -156,8 +156,7 @@ export function AddMovieDialog({
                     <Input
                       id={languageId}
                       name="languageWatched"
-                      placeholder="Japanese"
-                      required
+                      placeholder="English"
                     />
                   </div>
                 </div>

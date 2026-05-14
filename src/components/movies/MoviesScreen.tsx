@@ -19,19 +19,14 @@ export async function MoviesScreen({ userId }: MoviesScreenProps) {
     .orderBy(asc(users.handle));
 
   return (
-    <section className="space-y-6">
-      <header className="flex justify-end">
-        <div className="flex items-center gap-3">
-          <div className="text-xs text-[var(--muted-foreground)]">
-            {movieLedger.length} entries
-          </div>
-          <AddMovieDialog
-            canAdd
-            watchedWithOptions={watchedWithOptions.map((user) => user.handle)}
-          />
-        </div>
-      </header>
-      <MovieLedger data={movieLedger} />
-    </section>
+    <MovieLedger
+      data={movieLedger}
+      toolbarActions={
+        <AddMovieDialog
+          canAdd
+          watchedWithOptions={watchedWithOptions.map((user) => user.handle)}
+        />
+      }
+    />
   );
 }

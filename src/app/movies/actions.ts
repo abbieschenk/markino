@@ -41,7 +41,8 @@ export async function addMovieEntry(
 
   const title = String(formData.get("title") ?? "").trim();
   const watchedOn = String(formData.get("watchedOn") ?? "").trim();
-  const languageWatched = String(formData.get("languageWatched") ?? "").trim();
+  const languageWatched =
+    String(formData.get("languageWatched") ?? "").trim() || "English";
   const rawStatus = String(formData.get("status") ?? "watched")
     .trim()
     .toLowerCase();
@@ -65,13 +66,6 @@ export async function addMovieEntry(
     return {
       status: "error",
       message: "Date watched is required.",
-    };
-  }
-
-  if (!languageWatched) {
-    return {
-      status: "error",
-      message: "Language watched is required.",
     };
   }
 

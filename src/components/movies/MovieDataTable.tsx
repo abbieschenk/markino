@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable react-hooks/incompatible-library */
 
+import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import {
   type ColumnDef,
@@ -32,6 +33,7 @@ import type { MovieLedgerEntry, WatchStatus } from "@/lib/movies";
 type MovieDataTableProps = {
   columns: ColumnDef<MovieLedgerEntry>[];
   data: MovieLedgerEntry[];
+  toolbarActions?: ReactNode;
 };
 
 const statusOptions: Array<WatchStatus | "all"> = [
@@ -41,7 +43,11 @@ const statusOptions: Array<WatchStatus | "all"> = [
   "dns",
 ];
 
-export function MovieDataTable({ columns, data }: MovieDataTableProps) {
+export function MovieDataTable({
+  columns,
+  data,
+  toolbarActions,
+}: MovieDataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([{ id: "rank", desc: false }]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
@@ -118,8 +124,11 @@ export function MovieDataTable({ columns, data }: MovieDataTableProps) {
             </SelectContent>
           </Select>
         </div>
-        <div className="text-xs text-muted-foreground">
-          {table.getFilteredRowModel().rows.length} visible
+        <div className="flex items-center gap-3">
+          <div className="text-xs text-muted-foreground">
+            {table.getFilteredRowModel().rows.length} of {data.length} movies
+          </div>
+          {toolbarActions}
         </div>
       </div>
       <Table>
