@@ -7,6 +7,38 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ## Project
 Markino is a quiet, dense movie watch/ranking app for personal and collaborative movie tracking.
 
+## Features
+
+Markino lets users log movies they have watched and rank them in a dense table view.
+
+- Log movies watched, including:
+  - Title of Movie
+  - Date watched
+  - Language watched in
+  - Watch status:
+    - Watched (default)
+    - DNF (did not finish)
+    - DNS (did not start)
+  - Watched With
+    - Optional list of other tagged users
+    - this makes the movie appear in the table of both users
+
+### Ranking / preference order
+
+Users can manually sort movies by personal preference.
+
+This ranking order must be persisted in the database.
+
+The table should support:
+- manual preference order
+- sorting by title
+- sorting by date watched
+- sorting by language
+- filtering by watched status
+- filtering by watched-with user
+
+The persisted preference order should not be lost when temporary table sorting/filtering is applied.
+
 ## Stack
 - Next.js (App Router)
 - TypeScript
