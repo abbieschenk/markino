@@ -90,7 +90,17 @@ export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
   },
   {
     accessorKey: "status",
-    header: "Status",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        size="sm"
+        className="-ml-2 h-7 px-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:bg-transparent hover:text-foreground"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Status
+        <ArrowUpDown className="size-3" />
+      </Button>
+    ),
     cell: ({ row }) => {
       const status = row.getValue<MovieLedgerEntry["status"]>("status");
 
@@ -111,7 +121,17 @@ export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
   },
   {
     accessorKey: "watchedWith",
-    header: "With",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        size="sm"
+        className="-ml-2 h-7 px-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:bg-transparent hover:text-foreground"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        With
+        <ArrowUpDown className="size-3" />
+      </Button>
+    ),
     cell: ({ row }) => {
       const watchedWith = row.getValue<string[]>("watchedWith");
       return (

@@ -20,28 +20,15 @@ export async function MoviesScreen({ userId }: MoviesScreenProps) {
 
   return (
     <section className="space-y-6">
-      <header className="space-y-2">
-        <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--muted-foreground)]">
-          Ledger
-        </p>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-medium tracking-[-0.03em]">
-              Movies
-            </h1>
-            <p className="max-w-3xl text-sm text-[var(--muted-foreground)]">
-              Watch entries loaded from your ledger, including shared watches.
-            </p>
+      <header className="flex justify-end">
+        <div className="flex items-center gap-3">
+          <div className="text-xs text-[var(--muted-foreground)]">
+            {movieLedger.length} entries
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-xs text-[var(--muted-foreground)]">
-              {movieLedger.length} entries
-            </div>
-            <AddMovieDialog
-              canAdd
-              watchedWithOptions={watchedWithOptions.map((user) => user.handle)}
-            />
-          </div>
+          <AddMovieDialog
+            canAdd
+            watchedWithOptions={watchedWithOptions.map((user) => user.handle)}
+          />
         </div>
       </header>
       <MovieLedger data={movieLedger} />

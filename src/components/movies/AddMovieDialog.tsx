@@ -102,22 +102,15 @@ export function AddMovieDialog({
             className="w-full max-w-2xl border border-[var(--border)] bg-[var(--background)] shadow-[0_24px_80px_rgba(0,0,0,0.18)]"
             onClick={(event) => event.stopPropagation()}
           >
-            <form
-              ref={formRef}
-              onSubmit={handleSubmit}
-              className="grid gap-0"
-            >
+            <form ref={formRef} onSubmit={handleSubmit} className="grid gap-0">
               <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
                 <div className="space-y-1">
-                  <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--muted-foreground)]">
-                    New Entry
-                  </p>
-                  <h2
+                  <p
                     id={dialogTitleId}
-                    className="text-base font-medium tracking-[-0.02em]"
+                    className="text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--muted-foreground)]"
                   >
                     Add Movie
-                  </h2>
+                  </p>
                 </div>
                 <Button
                   type="button"
@@ -226,10 +219,7 @@ export function AddMovieDialog({
                   </p>
                 ) : null}
               </div>
-              <div className="flex items-center justify-between gap-3 border-t border-[var(--border)] px-4 py-3">
-                <p className="text-xs text-[var(--muted-foreground)]">
-                  The ledger still shows mock rows for now.
-                </p>
+              <div className="flex justify-end border-t border-[var(--border)] px-4 py-3">
                 <div className="flex items-center gap-2">
                   <Button
                     type="button"
