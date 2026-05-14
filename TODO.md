@@ -1,0 +1,4 @@
+- Actually use shadcn components
+- Movie sorting + persistence
+- Status in add dialog is weird, UI-wise
+- Watched With should be a better component / UI
