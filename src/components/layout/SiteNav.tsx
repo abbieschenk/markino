@@ -1,16 +1,25 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 
 import { AuthNav } from "@/components/auth/AuthNav";
+import { auth } from "@/lib/auth";
 
-const links = [
+const loggedOutLinks = [
   { href: "/", label: "Overview" },
-  { href: "/sign-in", label: "Sign In" },
-  { href: "/sign-up", label: "Sign Up" },
-  { href: "/movies", label: "Movies" },
-  { href: "/settings", label: "Settings" },
-];
+] as const;
 
-export function SiteNav() {
+const loggedInLinks = [
+  { href: "/", label: "Movies" },
+  { href: "/movies", label: "Ledger" },
+  { href: "/settings", label: "Settings" },
+] as const;
+
+export async function SiteNav() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  const links = session ? loggedInLinks : loggedOutLinks;
+
   return (
     <header className="sticky top-0 z-10 border-b border-[var(--border)] bg-[color:color-mix(in_srgb,var(--background)_92%,white)] backdrop-blur">
       <div className="flex min-h-14 items-center justify-between gap-4">

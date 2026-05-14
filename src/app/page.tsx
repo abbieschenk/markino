@@ -1,6 +1,18 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 
-export default function Home() {
+import { MoviesScreen } from "@/components/movies/MoviesScreen";
+import { auth } from "@/lib/auth";
+
+export default async function Home() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (session?.user?.id) {
+    return <MoviesScreen userId={session.user.id} />;
+  }
+
   return (
     <section className="grid gap-8 py-12 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
       <div className="space-y-6">
