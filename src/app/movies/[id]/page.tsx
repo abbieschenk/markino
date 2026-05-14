@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
-import { getMovieById } from "@/lib/movies";
+
+import { auth } from "@/lib/auth";
+import { getMovieByIdForUser } from "@/lib/movies";
 
 type MovieDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -11,7 +14,12 @@ export async function generateMetadata({
   params,
 }: MovieDetailPageProps): Promise<Metadata> {
   const { id } = await params;
-  const movie = getMovieById(id);
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  const movie = session?.user?.id
+    ? await getMovieByIdForUser(id, session.user.id)
+    : null;
 
   return {
     title: movie ? movie.title : "Movie",
@@ -22,7 +30,12 @@ export default async function MovieDetailPage({
   params,
 }: MovieDetailPageProps) {
   const { id } = await params;
-  const movie = getMovieById(id);
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  const movie = session?.user?.id
+    ? await getMovieByIdForUser(id, session.user.id)
+    : null;
 
   if (!movie) {
     notFound();

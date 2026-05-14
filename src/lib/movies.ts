@@ -1,3 +1,10 @@
+import "server-only";
+
+import { and, eq, inArray } from "drizzle-orm";
+
+import { db } from "@/db";
+import { movieRankings, watchEntryParticipants, watchEntries } from "@/db/schema";
+
 export type WatchStatus = "watched" | "dnf" | "dns";
 
 export type MovieLedgerEntry = {
@@ -10,81 +17,176 @@ export type MovieLedgerEntry = {
   watchedWith: string[];
 };
 
-export const movieLedger: MovieLedgerEntry[] = [
-  {
-    id: "tokyo-story",
-    rank: 1,
-    title: "Tokyo Story",
-    watchedOn: "2026-04-19",
-    language: "Japanese",
-    status: "watched",
-    watchedWith: ["Ari"],
-  },
-  {
-    id: "la-ceremonie",
-    rank: 2,
-    title: "La Ceremonie",
-    watchedOn: "2026-03-03",
-    language: "French",
-    status: "watched",
-    watchedWith: [],
-  },
-  {
-    id: "the-green-ray",
-    rank: 3,
-    title: "The Green Ray",
-    watchedOn: "2026-02-14",
-    language: "French",
-    status: "watched",
-    watchedWith: ["Noa"],
-  },
-  {
-    id: "cure",
-    rank: 4,
-    title: "Cure",
-    watchedOn: "2026-01-09",
-    language: "Japanese",
-    status: "watched",
-    watchedWith: ["Ari", "Noa"],
-  },
-  {
-    id: "news-from-home",
-    rank: 5,
-    title: "News from Home",
-    watchedOn: "2025-12-22",
-    language: "French",
-    status: "dnf",
-    watchedWith: [],
-  },
-  {
-    id: "in-the-mood-for-love",
-    rank: 6,
-    title: "In the Mood for Love",
-    watchedOn: "2025-11-30",
-    language: "Cantonese",
-    status: "watched",
-    watchedWith: ["Mina"],
-  },
-  {
-    id: "where-is-the-friends-house",
-    rank: 7,
-    title: "Where Is the Friend's House?",
-    watchedOn: "2025-11-02",
-    language: "Persian",
-    status: "watched",
-    watchedWith: [],
-  },
-  {
-    id: "red-desert",
-    rank: 8,
-    title: "Red Desert",
-    watchedOn: "2025-10-10",
-    language: "Italian",
-    status: "dns",
-    watchedWith: ["Mina"],
-  },
-];
+async function getOwnedWatchEntries(userId: string) {
+  return db.query.watchEntries.findMany({
+    where: eq(watchEntries.userId, userId),
+    with: {
+      movie: true,
+      user: {
+        columns: {
+          id: true,
+          handle: true,
+        },
+      },
+      participants: {
+        with: {
+          user: {
+            columns: {
+              id: true,
+              handle: true,
+            },
+          },
+        },
+      },
+    },
+  });
+}
 
-export function getMovieById(id: string) {
-  return movieLedger.find((movie) => movie.id === id);
+async function getParticipantWatchEntries(userId: string) {
+  return db.query.watchEntryParticipants.findMany({
+    where: eq(watchEntryParticipants.userId, userId),
+    with: {
+      watchEntry: {
+        with: {
+          movie: true,
+          user: {
+            columns: {
+              id: true,
+              handle: true,
+            },
+          },
+          participants: {
+            with: {
+              user: {
+                columns: {
+                  id: true,
+                  handle: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+type HydratedWatchEntry = Awaited<ReturnType<typeof getOwnedWatchEntries>>[number];
+
+function sortLedgerEntries(left: MovieLedgerEntry, right: MovieLedgerEntry) {
+  if (left.rank !== right.rank) {
+    return left.rank - right.rank;
+  }
+
+  if (left.watchedOn !== right.watchedOn) {
+    return right.watchedOn.localeCompare(left.watchedOn);
+  }
+
+  return left.title.localeCompare(right.title, "en");
+}
+
+function mapWatchedWithHandles(entry: HydratedWatchEntry, userId: string) {
+  const handles = new Set<string>();
+
+  if (entry.userId !== userId) {
+    handles.add(entry.user.handle);
+  }
+
+  for (const participant of entry.participants) {
+    if (participant.userId !== userId) {
+      handles.add(participant.user.handle);
+    }
+  }
+
+  return Array.from(handles).sort((left, right) => left.localeCompare(right, "en"));
+}
+
+function mapLedgerEntry(
+  entry: HydratedWatchEntry,
+  userId: string,
+  rank: number,
+): MovieLedgerEntry {
+  return {
+    id: entry.movieId,
+    rank,
+    title: entry.movie.title,
+    watchedOn: entry.watchedOn,
+    language: entry.languageWatched,
+    status: entry.status,
+    watchedWith: mapWatchedWithHandles(entry, userId),
+  };
+}
+
+async function getVisibleWatchEntriesForUser(userId: string) {
+  const ownedEntries = await getOwnedWatchEntries(userId);
+  const participantLinks = await getParticipantWatchEntries(userId);
+
+  const entriesById = new Map<string, HydratedWatchEntry>();
+
+  for (const entry of ownedEntries) {
+    entriesById.set(entry.id, entry);
+  }
+
+  for (const participantLink of participantLinks) {
+    entriesById.set(participantLink.watchEntry.id, participantLink.watchEntry);
+  }
+
+  return Array.from(entriesById.values());
+}
+
+export async function getMovieLedgerForUser(
+  userId: string,
+): Promise<MovieLedgerEntry[]> {
+  const visibleEntries = await getVisibleWatchEntriesForUser(userId);
+
+  if (visibleEntries.length === 0) {
+    return [];
+  }
+
+  const movieIds = Array.from(new Set(visibleEntries.map((entry) => entry.movieId)));
+  const rankings = await db.query.movieRankings.findMany({
+    where: and(
+      eq(movieRankings.userId, userId),
+      inArray(movieRankings.movieId, movieIds),
+    ),
+    columns: {
+      movieId: true,
+      rank: true,
+    },
+  });
+
+  const rankByMovieId = new Map(
+    rankings.map((ranking) => [ranking.movieId, ranking.rank]),
+  );
+  const sortedEntries = [...visibleEntries].sort((left, right) => {
+    const leftRank = rankByMovieId.get(left.movieId);
+    const rightRank = rankByMovieId.get(right.movieId);
+
+    if (leftRank != null && rightRank != null && leftRank !== rightRank) {
+      return leftRank - rightRank;
+    }
+
+    if (leftRank != null) {
+      return -1;
+    }
+
+    if (rightRank != null) {
+      return 1;
+    }
+
+    if (left.watchedOn !== right.watchedOn) {
+      return right.watchedOn.localeCompare(left.watchedOn);
+    }
+
+    return left.movie.title.localeCompare(right.movie.title, "en");
+  });
+
+  return sortedEntries
+    .map((entry, index) => mapLedgerEntry(entry, userId, index + 1))
+    .sort(sortLedgerEntries);
+}
+
+export async function getMovieByIdForUser(movieId: string, userId: string) {
+  const entries = await getMovieLedgerForUser(userId);
+  return entries.find((entry) => entry.id === movieId) ?? null;
 }

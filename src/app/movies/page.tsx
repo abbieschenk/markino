@@ -7,7 +7,7 @@ import { MovieLedger } from "@/components/movies/MovieLedger";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { movieLedger } from "@/lib/movies";
+import { getMovieLedgerForUser } from "@/lib/movies";
 
 export const metadata: Metadata = {
   title: "Movies",
@@ -17,6 +17,9 @@ export default async function MoviesPage() {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
+  const movieLedger = session?.user?.id
+    ? await getMovieLedgerForUser(session.user.id)
+    : [];
   const watchedWithOptions = session?.user?.id
     ? await db
         .select({ handle: users.handle })
@@ -37,7 +40,7 @@ export default async function MoviesPage() {
               Movies
             </h1>
             <p className="max-w-3xl text-sm text-[var(--muted-foreground)]">
-              Mock ranking table with compact controls and fake watch data.
+              Watch entries loaded from your ledger, including shared watches.
             </p>
           </div>
           <div className="flex items-center gap-3">
