@@ -3,6 +3,7 @@
 import { startTransition, useEffect, useId, useRef, useState } from "react";
 
 import { addMovieEntry } from "@/app/movies/actions";
+import { DatePickerField } from "@/components/movies/DatePickerField";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
@@ -32,6 +33,7 @@ export function AddMovieDialog({
     status: "idle",
     message: null,
   });
+  const [formKey, setFormKey] = useState(0);
   const formRef = useRef<HTMLFormElement>(null);
   const dialogTitleId = useId();
   const titleInputId = useId();
@@ -75,6 +77,7 @@ export function AddMovieDialog({
 
       if (nextState.status === "success") {
         formRef.current?.reset();
+        setFormKey((current) => current + 1);
         setOpen(false);
       }
     });
@@ -102,7 +105,12 @@ export function AddMovieDialog({
             className="w-full max-w-2xl border border-[var(--border)] bg-[var(--background)] shadow-[0_24px_80px_rgba(0,0,0,0.18)]"
             onClick={(event) => event.stopPropagation()}
           >
-            <form ref={formRef} onSubmit={handleSubmit} className="grid gap-0">
+            <form
+              key={formKey}
+              ref={formRef}
+              onSubmit={handleSubmit}
+              className="grid gap-0"
+            >
               <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
                 <div className="space-y-1">
                   <p
@@ -139,12 +147,7 @@ export function AddMovieDialog({
                     >
                       Date Watched
                     </label>
-                    <Input
-                      id={watchedOnId}
-                      name="watchedOn"
-                      type="date"
-                      required
-                    />
+                    <DatePickerField id={watchedOnId} name="watchedOn" />
                   </div>
                   <div className="grid gap-1.5">
                     <label
