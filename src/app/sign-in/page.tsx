@@ -1,4 +1,4 @@
-import { SignInForm } from "@/components/auth/sign-in-form";
+import { SignInFormShell } from "@/components/auth/sign-in-form-shell";
 
 export default function SignInPage() {
   return (
@@ -31,7 +31,7 @@ export default function SignInPage() {
           </div>
         </dl>
       </div>
-      <SignInForm />
+      <SignInFormShell />
     </section>
   );
 }
