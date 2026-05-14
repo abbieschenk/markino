@@ -1,12 +1,30 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { asc, ne } from "drizzle-orm";
+
+import { AddMovieDialog } from "@/components/movies/AddMovieDialog";
 import { MovieLedger } from "@/components/movies/MovieLedger";
+import { db } from "@/db";
+import { users } from "@/db/schema";
+import { auth } from "@/lib/auth";
 import { movieLedger } from "@/lib/movies";
 
 export const metadata: Metadata = {
   title: "Movies",
 };
 
-export default function MoviesPage() {
+export default async function MoviesPage() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  const watchedWithOptions = session?.user?.id
+    ? await db
+        .select({ handle: users.handle })
+        .from(users)
+        .where(ne(users.id, session.user.id))
+        .orderBy(asc(users.handle))
+    : [];
+
   return (
     <section className="space-y-6">
       <header className="space-y-2">
@@ -22,8 +40,14 @@ export default function MoviesPage() {
               Mock ranking table with compact controls and fake watch data.
             </p>
           </div>
-          <div className="text-xs text-[var(--muted-foreground)]">
-            {movieLedger.length} entries
+          <div className="flex items-center gap-3">
+            <div className="text-xs text-[var(--muted-foreground)]">
+              {movieLedger.length} entries
+            </div>
+            <AddMovieDialog
+              canAdd={Boolean(session?.user?.id)}
+              watchedWithOptions={watchedWithOptions.map((user) => user.handle)}
+            />
           </div>
         </div>
       </header>
