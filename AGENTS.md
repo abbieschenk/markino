@@ -57,6 +57,10 @@ The design for this site is:
 ## Code Style
 - Use server components by default
 - Only use client components when necessary
+- Use existing shadcn components
+- Do not create primitives already provided by shadcn/ui
+- Avoid introducing parallel component systems
+- Extend shadcn components rather than replacing them
 - Keep components small and named clearly
 - Prefer explicit types
 - Avoid unnecessary abstraction
