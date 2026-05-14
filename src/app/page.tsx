@@ -25,10 +25,10 @@ export default function Home() {
             Create Account
           </Link>
           <Link
-            href="/movies"
+            href="/sign-in"
             className="inline-flex h-9 items-center border border-transparent px-3 text-[var(--muted-foreground)] hover:border-[var(--border)] hover:text-[var(--foreground)]"
           >
-            Open Ledger
+            Sign In
           </Link>
         </div>
       </div>
