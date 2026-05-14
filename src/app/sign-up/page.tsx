@@ -1,4 +1,4 @@
-import { SignUpFormShell } from "@/components/auth/sign-up-form-shell";
+import { SignUpFormShell } from "@/components/auth/SignUpFormShell";
 
 export default function SignUpPage() {
   return (

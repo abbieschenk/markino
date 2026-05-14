@@ -2,11 +2,10 @@
 
 import dynamic from "next/dynamic";
 
-import { AuthFormLoading } from "@/components/auth/auth-form-loading";
+import { AuthFormLoading } from "@/components/auth/AuthFormLoading";
 
 export const SignInFormShell = dynamic(
-  () =>
-    import("@/components/auth/sign-in-form").then((module) => module.SignInForm),
+  () => import("@/components/auth/SignInForm").then((module) => module.SignInForm),
   {
     ssr: false,
     loading: () => <AuthFormLoading title="Sign In" />,

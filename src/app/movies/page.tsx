@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { MovieLedger } from "@/components/movies/movie-ledger";
+import { MovieLedger } from "@/components/movies/MovieLedger";
 import { movieLedger } from "@/lib/movies";
 
 export const metadata: Metadata = {

@@ -1,7 +1,7 @@
 "use client";
 
-import { movieColumns } from "@/components/movies/movie-columns";
-import { MovieDataTable } from "@/components/movies/movie-data-table";
+import { movieColumns } from "@/components/movies/MovieColumns";
+import { MovieDataTable } from "@/components/movies/MovieDataTable";
 import type { MovieLedgerEntry } from "@/lib/movies";
 
 type MovieLedgerProps = {

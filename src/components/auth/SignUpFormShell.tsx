@@ -2,11 +2,10 @@
 
 import dynamic from "next/dynamic";
 
-import { AuthFormLoading } from "@/components/auth/auth-form-loading";
+import { AuthFormLoading } from "@/components/auth/AuthFormLoading";
 
 export const SignUpFormShell = dynamic(
-  () =>
-    import("@/components/auth/sign-up-form").then((module) => module.SignUpForm),
+  () => import("@/components/auth/SignUpForm").then((module) => module.SignUpForm),
   {
     ssr: false,
     loading: () => <AuthFormLoading title="Create Account" />,

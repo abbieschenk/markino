@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { AuthNav } from "@/components/auth/auth-nav";
+import { AuthNav } from "@/components/auth/AuthNav";
 
 const links = [
   { href: "/", label: "Overview" },

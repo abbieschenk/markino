@@ -1,4 +1,4 @@
-import { SignInFormShell } from "@/components/auth/sign-in-form-shell";
+import { SignInFormShell } from "@/components/auth/SignInFormShell";
 
 export default function SignInPage() {
   return (
