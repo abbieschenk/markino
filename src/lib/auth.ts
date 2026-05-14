@@ -1,9 +1,17 @@
 import "server-only";
+import { eq } from "drizzle-orm";
 import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 
 import { db } from "@/db";
 import { authSchema } from "@/db/auth-schema";
+
+const HANDLE_PATTERN = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/;
+
+function normalizeHandle(value: string) {
+  return value.toLowerCase().trim();
+}
 
 function createHandle(name: string, email: string) {
   const base =
@@ -19,6 +27,23 @@ function createHandle(name: string, email: string) {
   const stem = base.slice(0, 23).replace(/-+$/g, "") || "user";
 
   return `${stem}-${suffix}`;
+}
+
+function validateHandle(handle: string) {
+  if (handle.length < 3 || handle.length > 32) {
+    throw APIError.from("BAD_REQUEST", {
+      code: "INVALID_HANDLE_LENGTH",
+      message: "Handle must be between 3 and 32 characters.",
+    });
+  }
+
+  if (!HANDLE_PATTERN.test(handle)) {
+    throw APIError.from("BAD_REQUEST", {
+      code: "INVALID_HANDLE_FORMAT",
+      message:
+        "Handle can only contain lowercase letters, numbers, and single separators (. _ -).",
+    });
+  }
 }
 
 const baseURL =
@@ -51,7 +76,7 @@ export const auth = betterAuth({
     additionalFields: {
       handle: {
         type: "string",
-        required: false,
+        required: true,
       },
     },
   },
@@ -69,34 +94,52 @@ export const auth = betterAuth({
     user: {
       create: {
         async before(user) {
-          if ("handle" in user && user.handle) {
-            return {
-              data: {
-                ...user,
-                displayName: user.name,
-              },
-            };
+          const handle =
+            "handle" in user && typeof user.handle === "string" && user.handle
+              ? normalizeHandle(user.handle)
+              : createHandle(user.name, user.email);
+
+          validateHandle(handle);
+
+          const existingUser = await db.query.users.findFirst({
+            where: eq(authSchema.user.handle, handle),
+            columns: { id: true },
+          });
+
+          if (existingUser) {
+            throw APIError.from("BAD_REQUEST", {
+              code: "HANDLE_TAKEN",
+              message: "Handle is already taken.",
+            });
           }
 
           return {
             data: {
               ...user,
               displayName: user.name,
-              handle: createHandle(user.name, user.email),
+              handle,
             },
           };
         },
       },
       update: {
         async before(user) {
-          if (!("name" in user) || !user.name) {
-            return;
+          const nextData = { ...user } as Record<string, unknown>;
+
+          if ("handle" in nextData && typeof nextData.handle === "string") {
+            const normalizedHandle = normalizeHandle(nextData.handle);
+            validateHandle(normalizedHandle);
+            nextData.handle = normalizedHandle;
+          }
+
+          if (!("name" in nextData) || !nextData.name) {
+            return { data: nextData };
           }
 
           return {
             data: {
-              ...user,
-              displayName: user.name,
+              ...nextData,
+              displayName: nextData.name,
             },
           };
         },

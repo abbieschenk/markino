@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   boolean,
   date,
@@ -17,7 +17,7 @@ import {
 export const authSessions = pgTable(
   "auth_sessions",
   {
-    id: text("id").primaryKey(),
+    id: text("id").default(sql`gen_random_uuid()::text`).primaryKey(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -41,7 +41,7 @@ export const authSessions = pgTable(
 export const authAccounts = pgTable(
   "auth_accounts",
   {
-    id: text("id").primaryKey(),
+    id: text("id").default(sql`gen_random_uuid()::text`).primaryKey(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -77,7 +77,7 @@ export const authAccounts = pgTable(
 export const authVerifications = pgTable(
   "auth_verifications",
   {
-    id: text("id").primaryKey(),
+    id: text("id").default(sql`gen_random_uuid()::text`).primaryKey(),
     identifier: text("identifier").notNull(),
     value: text("value").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),

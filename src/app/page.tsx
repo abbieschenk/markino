@@ -19,16 +19,16 @@ export default function Home() {
         </div>
         <div className="flex flex-wrap gap-3 text-sm">
           <Link
-            href="/movies"
+            href="/sign-up"
             className="inline-flex h-9 items-center border border-[var(--border)] px-3 font-medium hover:bg-[var(--accent)]"
           >
-            Open Ledger
+            Create Account
           </Link>
           <Link
-            href="/settings"
+            href="/movies"
             className="inline-flex h-9 items-center border border-transparent px-3 text-[var(--muted-foreground)] hover:border-[var(--border)] hover:text-[var(--foreground)]"
           >
-            Settings
+            Open Ledger
           </Link>
         </div>
       </div>
@@ -51,7 +51,7 @@ export default function Home() {
           </div>
           <div className="grid grid-cols-[8rem_1fr] px-4 py-3">
             <dt className="text-[var(--muted-foreground)]">State</dt>
-            <dd>Mock data only</dd>
+            <dd>Email sign-up enabled</dd>
           </div>
         </dl>
       </aside>
