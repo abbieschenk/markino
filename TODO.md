@@ -2,3 +2,7 @@
 - Movie sorting + persistence
 - Status in add dialog is weird, UI-wise
 - Watched With should be a better component / UI
+- Optimistic UI for add and delete
+- Edit functionality
+- Icons!
+- signup should save username as email in password managers

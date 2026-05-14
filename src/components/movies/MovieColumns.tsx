@@ -54,14 +54,21 @@ export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
         <ArrowUpDown className="size-3" />
       </Button>
     ),
-    cell: ({ row }) => (
-      <Link
-        href={`/movies/${row.original.id}`}
-        className="font-medium hover:underline"
-      >
-        {row.getValue("title")}
-      </Link>
-    ),
+    cell: ({ row }) => {
+      const status = row.getValue<MovieLedgerEntry["status"]>("status");
+
+      return (
+        <Link
+          href={`/movies/${row.original.id}`}
+          className={cn(
+            "hover:underline",
+            status !== "watched" ? "font-light italic" : "font-medium",
+          )}
+        >
+          {row.getValue("title")}
+        </Link>
+      );
+    },
   },
   {
     accessorKey: "watchedOn",
@@ -108,14 +115,7 @@ export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
       const status = row.getValue<MovieLedgerEntry["status"]>("status");
 
       return (
-        <span
-          className={cn(
-            "inline-flex min-w-12 justify-center border px-1.5 py-0.5 text-[11px] uppercase tracking-[0.18em]",
-            status === "watched" && "border-[var(--border)]",
-            status === "dnf" && "border-[#c9a66b]",
-            status === "dns" && "border-[#b7b2a8]",
-          )}
-        >
+        <span className="inline-flex min-w-12 justify-center border px-1.5 py-0.5 text-[11px] uppercase tracking-[0.18em] border-[var(--border)]">
           {status}
         </span>
       );
