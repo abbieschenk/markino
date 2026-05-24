@@ -69,12 +69,13 @@ export function SignInForm({ signupsEnabled }: SignInFormProps) {
           </label>
           <Input
             id="email"
+            name="username"
             type="email"
             value={form.email}
             onChange={(event) =>
               setForm((current) => ({ ...current, email: event.target.value }))
             }
-            autoComplete="email"
+            autoComplete="username"
             required
           />
         </div>
@@ -87,6 +88,7 @@ export function SignInForm({ signupsEnabled }: SignInFormProps) {
           </label>
           <Input
             id="password"
+            name="password"
             type="password"
             value={form.password}
             onChange={(event) =>

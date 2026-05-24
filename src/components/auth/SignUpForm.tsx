@@ -86,12 +86,15 @@ export function SignUpForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-0 border border-[var(--border)]">
+    <div className="grid gap-0 border border-[var(--border)]">
       <div className="border-b border-[var(--border)] px-4 py-3">
         <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--muted-foreground)]">
           Create Account
         </p>
       </div>
+      <form id="sign-up-form" onSubmit={handleSubmit} className="hidden">
+        <input type="hidden" name="username" autoComplete="username" value={form.email.trim()} readOnly />
+      </form>
       <div className="grid gap-5 px-4 py-4">
         <div className="grid gap-1.5">
           <label htmlFor="name" className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]">
@@ -99,6 +102,8 @@ export function SignUpForm() {
           </label>
           <Input
             id="name"
+            name="name"
+            form="sign-up-form"
             value={form.name}
             onChange={(event) =>
               setForm((current) => ({ ...current, name: event.target.value }))
@@ -108,38 +113,19 @@ export function SignUpForm() {
           />
         </div>
         <div className="grid gap-1.5">
-          <label htmlFor="handle" className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]">
-            Handle
-          </label>
-          <Input
-            id="handle"
-            value={form.handle}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                handle: normalizeHandle(event.target.value),
-              }))
-            }
-            autoComplete="username"
-            spellCheck={false}
-            required
-          />
-          <p className="text-xs text-[var(--muted-foreground)]">
-            Used in shared watch logs. Lowercase only.
-          </p>
-        </div>
-        <div className="grid gap-1.5">
           <label htmlFor="email" className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]">
             Email
           </label>
           <Input
             id="email"
+            name="username"
             type="email"
+            form="sign-up-form"
             value={form.email}
             onChange={(event) =>
               setForm((current) => ({ ...current, email: event.target.value }))
             }
-            autoComplete="email"
+            autoComplete="username"
             required
           />
         </div>
@@ -147,9 +133,18 @@ export function SignUpForm() {
           <label htmlFor="password" className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]">
             Password
           </label>
+          <input
+            type="hidden"
+            name="username"
+            autoComplete="username"
+            value={form.email.trim()}
+            readOnly
+          />
           <Input
             id="password"
+            name="password"
             type="password"
+            form="sign-up-form"
             value={form.password}
             onChange={(event) =>
               setForm((current) => ({
@@ -160,6 +155,28 @@ export function SignUpForm() {
             autoComplete="new-password"
             required
           />
+        </div>
+        <div className="grid gap-1.5">
+          <label htmlFor="handle" className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]">
+            Handle
+          </label>
+          <Input
+            id="handle"
+            name="profile-handle"
+            value={form.handle}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                handle: normalizeHandle(event.target.value),
+              }))
+            }
+            autoComplete="off"
+            spellCheck={false}
+            required
+          />
+          <p className="text-xs text-[var(--muted-foreground)]">
+            Used in shared watch logs. Lowercase only.
+          </p>
         </div>
         {error ? (
           <p className="border border-[var(--destructive)]/20 bg-[var(--destructive)]/5 px-3 py-2 text-sm text-[var(--destructive)]">
@@ -177,10 +194,10 @@ export function SignUpForm() {
             Sign in
           </Link>
         </p>
-        <Button type="submit" size="lg" disabled={isPending}>
+        <Button form="sign-up-form" type="submit" size="lg" disabled={isPending}>
           {isPending ? "Creating..." : "Create Account"}
         </Button>
       </div>
-    </form>
+    </div>
   );
 }
