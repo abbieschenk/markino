@@ -200,13 +200,9 @@ export function AddMovieDialog({
                 onValueChange={setWatchedWith}
               />
             </div>
-            {state.message ? (
+            {state.status === "error" && state.message ? (
               <p
-                className={
-                  state.status === "error"
-                    ? "border border-[var(--destructive)]/20 bg-[var(--destructive)]/5 px-3 py-2 text-sm text-[var(--destructive)]"
-                    : "border border-[var(--border)] bg-[var(--muted)] px-3 py-2 text-sm"
-                }
+                className="border border-[var(--destructive)]/20 bg-[var(--destructive)]/5 px-3 py-2 text-sm text-[var(--destructive)]"
               >
                 {state.message}
               </p>
