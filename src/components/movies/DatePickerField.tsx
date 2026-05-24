@@ -4,9 +4,9 @@ import { format, parse } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { Button } from "@/components/ui/Button";
-import { Calendar } from "@/components/ui/Calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/Popover";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 type DatePickerFieldProps = {

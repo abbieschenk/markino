@@ -4,8 +4,8 @@ import { startTransition, useId, useRef, useState } from "react";
 
 import { addMovieEntry } from "@/app/movies/actions";
 import { DatePickerField } from "@/components/movies/DatePickerField";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +20,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/Select";
+} from "@/components/ui/select";
 
 type AddMovieDialogProps = {
   canAdd: boolean;

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { startTransition, useState } from "react";
 
 import { deleteMovieEntry } from "@/app/movies/actions";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,

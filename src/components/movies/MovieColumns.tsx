@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { ColumnDef, FilterFn } from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { DeleteMovieButton } from "@/components/movies/DeleteMovieButton";
 import { cn } from "@/lib/utils";
 import type { MovieLedgerEntry } from "@/lib/movies";
