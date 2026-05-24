@@ -4,6 +4,7 @@ import { startTransition, useId, useRef, useState } from "react";
 
 import { addMovieEntry } from "@/app/movies/actions";
 import { DatePickerField } from "@/components/movies/DatePickerField";
+import { WatchedWithCombobox } from "@/components/movies/WatchedWithCombobox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -49,12 +50,23 @@ export function AddMovieDialog({
     message: null,
   });
   const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]["value"]>("watched");
+  const [watchedWith, setWatchedWith] = useState<string[]>([]);
   const [formKey, setFormKey] = useState(0);
+  const [comboboxLayerElement, setComboboxLayerElement] =
+    useState<HTMLDivElement | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const titleInputId = useId();
   const watchedOnId = useId();
   const languageId = useId();
   const watchedWithId = useId();
+
+  function preventComboboxOutsideDismiss(event: Event) {
+    const target = event.target as HTMLElement | null;
+
+    if (target?.closest("[data-slot='combobox-content']")) {
+      event.preventDefault();
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -78,6 +90,7 @@ export function AddMovieDialog({
         formRef.current?.reset();
         setFormKey((current) => current + 1);
         setStatus("watched");
+        setWatchedWith([]);
         setOpen(false);
       }
     });
@@ -93,7 +106,14 @@ export function AddMovieDialog({
       <DialogContent
         showCloseButton={false}
         className="max-w-2xl rounded-none border border-[var(--border)] bg-[var(--background)] p-0 text-[var(--foreground)] shadow-[0_24px_80px_rgba(0,0,0,0.18)]"
+        onFocusOutside={preventComboboxOutsideDismiss}
+        onInteractOutside={preventComboboxOutsideDismiss}
+        onPointerDownOutside={preventComboboxOutsideDismiss}
       >
+        <div
+          ref={setComboboxLayerElement}
+          className="pointer-events-none absolute inset-0 z-20"
+        />
         <form
           key={formKey}
           ref={formRef}
@@ -163,30 +183,22 @@ export function AddMovieDialog({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid gap-1.5">
-                <label
-                  htmlFor={watchedWithId}
-                  className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]"
-                >
-                  Watched With
-                </label>
-                <select
-                  id={watchedWithId}
-                  name="watchedWith"
-                  multiple
-                  size={Math.min(Math.max(watchedWithOptions.length, 4), 8)}
-                  className="min-h-32 border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm outline-none focus:border-[var(--foreground)]"
-                >
-                  {watchedWithOptions.map((handle) => (
-                    <option key={handle} value={handle}>
-                      {handle}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-[var(--muted-foreground)]">
-                  Hold Command or Ctrl to select multiple handles.
-                </p>
-              </div>
+            </div>
+            <div className="grid min-w-0 gap-1.5">
+              <label
+                htmlFor={watchedWithId}
+                className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]"
+              >
+                Watched With
+              </label>
+              <WatchedWithCombobox
+                id={watchedWithId}
+                name="watchedWith"
+                options={watchedWithOptions}
+                portalContainer={comboboxLayerElement}
+                value={watchedWith}
+                onValueChange={setWatchedWith}
+              />
             </div>
             {state.message ? (
               <p
