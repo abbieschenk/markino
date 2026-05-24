@@ -1,8 +1,9 @@
 "use client";
 /* eslint-disable react-hooks/incompatible-library */
 
-import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { GripVertical } from "lucide-react";
+import { startTransition, useEffect, useMemo, useState } from "react";
+import type { DragEvent, ReactNode } from "react";
 import {
   type ColumnDef,
   type ColumnFiltersState,
@@ -28,7 +29,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { reorderMovieRankings } from "@/app/movies/actions";
 import type { MovieLedgerEntry, WatchStatus } from "@/lib/movies";
+import { cn } from "@/lib/utils";
 
 type MovieDataTableProps = {
   columns: ColumnDef<MovieLedgerEntry>[];
@@ -43,29 +46,104 @@ const statusOptions: Array<WatchStatus | "all"> = [
   "dns",
 ];
 
+type DropTarget = {
+  movieId: string;
+  position: "before" | "after";
+};
+
+function rankLedgerEntries(entries: MovieLedgerEntry[]) {
+  return entries.map((entry, index) => ({
+    ...entry,
+    rank: index + 1,
+  }));
+}
+
+function moveMovieInRankOrder(
+  entries: MovieLedgerEntry[],
+  draggedMovieId: string,
+  target: DropTarget,
+) {
+  if (draggedMovieId === target.movieId) {
+    return null;
+  }
+
+  const rankOrderedEntries = [...entries].sort((left, right) => {
+    if (left.rank !== right.rank) {
+      return left.rank - right.rank;
+    }
+
+    return left.title.localeCompare(right.title, "en");
+  });
+  const draggedEntry = rankOrderedEntries.find(
+    (entry) => entry.movieId === draggedMovieId,
+  );
+
+  if (!draggedEntry) {
+    return null;
+  }
+
+  const entriesWithoutDragged = rankOrderedEntries.filter(
+    (entry) => entry.movieId !== draggedMovieId,
+  );
+  const targetIndex = entriesWithoutDragged.findIndex(
+    (entry) => entry.movieId === target.movieId,
+  );
+
+  if (targetIndex === -1) {
+    return null;
+  }
+
+  const insertIndex =
+    target.position === "after" ? targetIndex + 1 : targetIndex;
+  entriesWithoutDragged.splice(insertIndex, 0, draggedEntry);
+
+  return rankLedgerEntries(entriesWithoutDragged);
+}
+
 export function MovieDataTable({
   columns,
   data,
   toolbarActions,
 }: MovieDataTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([{ id: "rank", desc: false }]);
+  const [tableData, setTableData] = useState<MovieLedgerEntry[]>(data);
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "rank", desc: false },
+  ]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [draggedMovieId, setDraggedMovieId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setTableData(data);
+  }, [data]);
 
   const watchedWithOptions = useMemo(() => {
     const people = new Set<string>();
 
-    for (const movie of data) {
+    for (const movie of tableData) {
       for (const person of movie.watchedWith) {
         people.add(person);
       }
     }
 
-    return ["all", ...Array.from(people).sort((left, right) => left.localeCompare(right))];
-  }, [data]);
+    return [
+      "all",
+      ...Array.from(people).sort((left, right) => left.localeCompare(right)),
+    ];
+  }, [tableData]);
+
+  const canReorder =
+    sorting.length === 1 &&
+    sorting[0]?.id === "rank" &&
+    sorting[0].desc === false;
+  const canDragReorder = canReorder && !isSavingOrder;
 
   const table = useReactTable({
-    data,
+    data: tableData,
     columns,
+    getRowId: (row) => row.movieId,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -77,9 +155,98 @@ export function MovieDataTable({
     },
   });
 
-  const statusFilter = (table.getColumn("status")?.getFilterValue() as string) ?? "all";
+  const statusFilter =
+    (table.getColumn("status")?.getFilterValue() as string) ?? "all";
   const watchedWithFilter =
     (table.getColumn("watchedWith")?.getFilterValue() as string) ?? "all";
+
+  function persistMovieOrder(
+    nextData: MovieLedgerEntry[],
+    previousData: MovieLedgerEntry[],
+  ) {
+    setIsSavingOrder(true);
+    setOrderError(null);
+
+    startTransition(async () => {
+      try {
+        const result = await reorderMovieRankings(
+          [...nextData]
+            .sort((left, right) => left.rank - right.rank)
+            .map((entry) => entry.movieId),
+        );
+
+        if (result.status === "error") {
+          setTableData(previousData);
+          setOrderError(result.message ?? "Unable to save the movie order.");
+        }
+      } catch (error) {
+        console.error("Failed to persist movie order", error);
+
+        setTableData(previousData);
+        setOrderError("Unable to save the movie order.");
+      } finally {
+        setIsSavingOrder(false);
+      }
+    });
+  }
+
+  function handleDragStart(
+    event: DragEvent<HTMLButtonElement>,
+    movieId: string,
+  ) {
+    if (!canDragReorder) {
+      event.preventDefault();
+      return;
+    }
+
+    setDraggedMovieId(movieId);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", movieId);
+  }
+
+  function handleDragOver(
+    event: DragEvent<HTMLTableRowElement>,
+    movieId: string,
+  ) {
+    if (!canDragReorder || !draggedMovieId || draggedMovieId === movieId) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const rowBounds = event.currentTarget.getBoundingClientRect();
+    const position =
+      event.clientY - rowBounds.top > rowBounds.height / 2 ? "after" : "before";
+
+    setDropTarget({ movieId, position });
+  }
+
+  function handleDrop(event: DragEvent<HTMLTableRowElement>, movieId: string) {
+    event.preventDefault();
+
+    if (!canDragReorder || !draggedMovieId) {
+      return;
+    }
+
+    const target = dropTarget ?? { movieId, position: "before" };
+    const previousData = tableData;
+    const nextData = moveMovieInRankOrder(tableData, draggedMovieId, target);
+
+    setDraggedMovieId(null);
+    setDropTarget(null);
+
+    if (!nextData) {
+      return;
+    }
+
+    setTableData(nextData);
+    persistMovieOrder(nextData, previousData);
+  }
+
+  function handleDragEnd() {
+    setDraggedMovieId(null);
+    setDropTarget(null);
+  }
 
   return (
     <section className="border border-[var(--border)] bg-white/40">
@@ -125,8 +292,14 @@ export function MovieDataTable({
           </Select>
         </div>
         <div className="flex items-center gap-3">
+          {orderError ? (
+            <div className="text-xs text-destructive">{orderError}</div>
+          ) : null}
+          {isSavingOrder ? (
+            <div className="text-xs text-muted-foreground">Saving order</div>
+          ) : null}
           <div className="text-xs text-muted-foreground">
-            {table.getFilteredRowModel().rows.length} of {data.length} movies
+            {table.getFilteredRowModel().rows.length} of {tableData.length} movies
           </div>
           {toolbarActions}
         </div>
@@ -168,10 +341,56 @@ export function MovieDataTable({
         <TableBody>
           {table.getRowModel().rows.length > 0 ? (
             table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id}>
+              <TableRow
+                key={row.id}
+                className={cn(
+                  draggedMovieId === row.original.movieId && "opacity-50",
+                  dropTarget?.movieId === row.original.movieId &&
+                    dropTarget.position === "before" &&
+                    "shadow-[inset_0_2px_0_0_var(--foreground)]",
+                  dropTarget?.movieId === row.original.movieId &&
+                    dropTarget.position === "after" &&
+                    "shadow-[inset_0_-2px_0_0_var(--foreground)]",
+                )}
+                onDragOver={(event) =>
+                  handleDragOver(event, row.original.movieId)
+                }
+                onDrop={(event) => handleDrop(event, row.original.movieId)}
+              >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    {cell.column.id === "rank" ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          draggable={canDragReorder}
+                          disabled={!canDragReorder}
+                          aria-label={`Reorder ${row.original.title}`}
+                          title={
+                            canDragReorder
+                              ? "Drag to reorder"
+                              : isSavingOrder
+                                ? "Saving order"
+                                : "Sort by rank to reorder"
+                          }
+                          className={cn(
+                            "-ml-1 flex size-5 items-center justify-center text-muted-foreground",
+                            canDragReorder
+                              ? "cursor-grab hover:text-foreground active:cursor-grabbing"
+                              : "cursor-not-allowed opacity-35",
+                          )}
+                          onDragStart={(event) =>
+                            handleDragStart(event, row.original.movieId)
+                          }
+                          onDragEnd={handleDragEnd}
+                        >
+                          <GripVertical className="size-3.5" />
+                        </button>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </div>
+                    ) : (
+                      flexRender(cell.column.columnDef.cell, cell.getContext())
+                    )}
                   </TableCell>
                 ))}
               </TableRow>

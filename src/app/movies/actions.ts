@@ -13,6 +13,7 @@ import {
   watchEntryParticipants,
 } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { getVisibleMovieIdsForUser } from "@/lib/movies";
 
 const VALID_STATUSES = new Set(["watched", "dnf", "dns"] as const);
 type WatchStatusValue = "watched" | "dnf" | "dns";
@@ -223,6 +224,76 @@ export async function deleteMovieEntry(
     return {
       status: "error",
       message: "Unable to delete the movie entry.",
+    };
+  }
+
+  revalidatePath("/movies");
+  revalidatePath("/");
+
+  return {
+    status: "success",
+    message: null,
+  };
+}
+
+export async function reorderMovieRankings(
+  orderedMovieIds: string[],
+): Promise<{ status: "error" | "success"; message: string | null }> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session?.user?.id) {
+    return {
+      status: "error",
+      message: "You must be signed in to reorder movies.",
+    };
+  }
+
+  const uniqueOrderedMovieIds = Array.from(new Set(orderedMovieIds));
+
+  if (uniqueOrderedMovieIds.length !== orderedMovieIds.length) {
+    return {
+      status: "error",
+      message: "Movie order contains duplicates.",
+    };
+  }
+
+  const visibleMovieIds = await getVisibleMovieIdsForUser(session.user.id);
+  const visibleMovieIdSet = new Set(visibleMovieIds);
+  const hasSameMovieSet =
+    uniqueOrderedMovieIds.length === visibleMovieIds.length &&
+    uniqueOrderedMovieIds.every((movieId) => visibleMovieIdSet.has(movieId));
+
+  if (!hasSameMovieSet) {
+    return {
+      status: "error",
+      message: "Movie order is out of date. Refresh and try again.",
+    };
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(movieRankings)
+        .where(eq(movieRankings.userId, session.user.id));
+
+      if (uniqueOrderedMovieIds.length > 0) {
+        await tx.insert(movieRankings).values(
+          uniqueOrderedMovieIds.map((movieId, index) => ({
+            userId: session.user.id,
+            movieId,
+            rank: index + 1,
+          })),
+        );
+      }
+    });
+  } catch (error) {
+    console.error("Failed to reorder movie rankings", error);
+
+    return {
+      status: "error",
+      message: "Unable to save the movie order.",
     };
   }
 

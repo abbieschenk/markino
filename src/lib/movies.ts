@@ -121,6 +121,20 @@ function mapLedgerEntry(
   };
 }
 
+function selectLedgerEntriesByMovie(entries: HydratedWatchEntry[]) {
+  const entriesByMovieId = new Map<string, HydratedWatchEntry>();
+
+  for (const entry of entries) {
+    const currentEntry = entriesByMovieId.get(entry.movieId);
+
+    if (!currentEntry || entry.watchedOn > currentEntry.watchedOn) {
+      entriesByMovieId.set(entry.movieId, entry);
+    }
+  }
+
+  return Array.from(entriesByMovieId.values());
+}
+
 async function getVisibleWatchEntriesForUser(userId: string) {
   const ownedEntries = await getOwnedWatchEntries(userId);
   const participantLinks = await getParticipantWatchEntries(userId);
@@ -138,16 +152,27 @@ async function getVisibleWatchEntriesForUser(userId: string) {
   return Array.from(entriesById.values());
 }
 
+export async function getVisibleMovieIdsForUser(
+  userId: string,
+): Promise<string[]> {
+  const visibleEntries = await getVisibleWatchEntriesForUser(userId);
+  return selectLedgerEntriesByMovie(visibleEntries).map((entry) => entry.movieId);
+}
+
 export async function getMovieLedgerForUser(
   userId: string,
 ): Promise<MovieLedgerEntry[]> {
-  const visibleEntries = await getVisibleWatchEntriesForUser(userId);
+  const visibleEntries = selectLedgerEntriesByMovie(
+    await getVisibleWatchEntriesForUser(userId),
+  );
 
   if (visibleEntries.length === 0) {
     return [];
   }
 
-  const movieIds = Array.from(new Set(visibleEntries.map((entry) => entry.movieId)));
+  const movieIds = Array.from(
+    new Set(visibleEntries.map((entry) => entry.movieId)),
+  );
   const rankings = await db.query.movieRankings.findMany({
     where: and(
       eq(movieRankings.userId, userId),
