@@ -13,7 +13,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth-client";
 
-export function AuthNav() {
+type AuthNavProps = {
+  signupsEnabled: boolean;
+};
+
+export function AuthNav({ signupsEnabled }: AuthNavProps) {
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -52,12 +56,14 @@ export function AuthNav() {
         >
           Sign In
         </Link>
-        <Link
-          href="/sign-up"
-          className="px-2 py-1 text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-        >
-          Sign Up
-        </Link>
+        {signupsEnabled ? (
+          <Link
+            href="/sign-up"
+            className="px-2 py-1 text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+          >
+            Sign Up
+          </Link>
+        ) : null}
       </div>
     );
   }

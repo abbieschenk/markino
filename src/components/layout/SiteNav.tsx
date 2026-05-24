@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { AuthNav } from "@/components/auth/AuthNav";
 import { auth } from "@/lib/auth";
+import { areSignupsEnabled } from "@/lib/auth-config";
 
 const loggedOutLinks = [
   { href: "/", label: "Overview" },
@@ -14,6 +15,7 @@ export async function SiteNav() {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
+  const signupsEnabled = areSignupsEnabled();
   const links = session ? loggedInLinks : loggedOutLinks;
 
   return (
@@ -34,7 +36,7 @@ export async function SiteNav() {
               </Link>
             ))}
           </nav>
-          <AuthNav />
+          <AuthNav signupsEnabled={signupsEnabled} />
         </div>
       </div>
     </header>

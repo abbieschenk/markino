@@ -3,11 +3,13 @@ import Link from "next/link";
 
 import { MoviesScreen } from "@/components/movies/MoviesScreen";
 import { auth } from "@/lib/auth";
+import { areSignupsEnabled } from "@/lib/auth-config";
 
 export default async function Home() {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
+  const signupsEnabled = areSignupsEnabled();
 
   if (session?.user?.id) {
     return <MoviesScreen userId={session.user.id} />;
@@ -22,22 +24,28 @@ export default async function Home() {
               Markino is a watch log for personal and collaborative movie
               tracking.
             </p>
-            <p>It is not yet available for public signup.</p>
+            <p>
+              {signupsEnabled
+                ? "Create your account to start tracking films."
+                : "Account creation is currently disabled."}
+            </p>
           </div>
         </div>
         <div className="flex flex-wrap gap-3 text-sm">
           <Link
-            href="/sign-up"
-            className="inline-flex h-9 items-center border border-[var(--border)] px-3 font-medium hover:bg-[var(--accent)]"
-          >
-            Create Account
-          </Link>
-          <Link
             href="/sign-in"
-            className="inline-flex h-9 items-center border border-transparent px-3 text-[var(--muted-foreground)] hover:border-[var(--border)] hover:text-[var(--foreground)]"
+            className="inline-flex h-9 items-center border border-[var(--border)] px-3 font-medium hover:bg-[var(--accent)]"
           >
             Sign In
           </Link>
+          {signupsEnabled ? (
+            <Link
+              href="/sign-up"
+              className="inline-flex h-9 items-center border border-transparent px-3 text-[var(--muted-foreground)] hover:border-[var(--border)] hover:text-[var(--foreground)]"
+            >
+              Create Account
+            </Link>
+          ) : null}
         </div>
       </div>
     </section>

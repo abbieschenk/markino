@@ -6,6 +6,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 
 import { db } from "@/db";
 import { authSchema } from "@/db/auth-schema";
+import { areSignupsEnabled } from "@/lib/auth-config";
 
 const HANDLE_PATTERN = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/;
 
@@ -94,6 +95,13 @@ export const auth = betterAuth({
     user: {
       create: {
         async before(user) {
+          if (!areSignupsEnabled()) {
+            throw APIError.from("FORBIDDEN", {
+              code: "SIGNUPS_DISABLED",
+              message: "Account creation is disabled.",
+            });
+          }
+
           const handle =
             "handle" in user && typeof user.handle === "string" && user.handle
               ? normalizeHandle(user.handle)

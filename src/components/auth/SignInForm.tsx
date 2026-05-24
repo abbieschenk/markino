@@ -8,6 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
 
+type SignInFormProps = {
+  signupsEnabled: boolean;
+};
+
 type FormState = {
   email: string;
   password: string;
@@ -18,7 +22,7 @@ const INITIAL_STATE: FormState = {
   password: "",
 };
 
-export function SignInForm() {
+export function SignInForm({ signupsEnabled }: SignInFormProps) {
   const router = useRouter();
   const [form, setForm] = useState(INITIAL_STATE);
   const [error, setError] = useState<string | null>(null);
@@ -102,15 +106,21 @@ export function SignInForm() {
         ) : null}
       </div>
       <div className="flex items-center justify-between gap-3 border-t border-[var(--border)] px-4 py-3">
-        <p className="text-xs text-[var(--muted-foreground)]">
-          Need an account?{" "}
-          <Link
-            href="/sign-up"
-            className="text-[var(--foreground)] underline underline-offset-4"
-          >
-            Create one
-          </Link>
-        </p>
+        <div className="text-xs text-[var(--muted-foreground)]">
+          {signupsEnabled ? (
+            <p>
+              Need an account?{" "}
+              <Link
+                href="/sign-up"
+                className="text-[var(--foreground)] underline underline-offset-4"
+              >
+                Create one
+              </Link>
+            </p>
+          ) : (
+            <p>Account creation is currently disabled.</p>
+          )}
+        </div>
         <Button type="submit" size="lg" disabled={isPending}>
           {isPending ? "Signing In..." : "Sign In"}
         </Button>

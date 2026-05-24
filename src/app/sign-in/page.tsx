@@ -1,6 +1,9 @@
 import { SignInFormShell } from "@/components/auth/SignInFormShell";
+import { areSignupsEnabled } from "@/lib/auth-config";
 
 export default function SignInPage() {
+  const signupsEnabled = areSignupsEnabled();
+
   return (
     <section className="grid gap-8 py-12 lg:grid-cols-[minmax(0,20rem)_minmax(24rem,34rem)] lg:justify-between">
       <div className="space-y-5">
@@ -16,7 +19,7 @@ export default function SignInPage() {
           </p>
         </div>
       </div>
-      <SignInFormShell />
+      <SignInFormShell signupsEnabled={signupsEnabled} />
     </section>
   );
 }

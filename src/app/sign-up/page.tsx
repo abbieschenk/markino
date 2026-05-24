@@ -1,6 +1,13 @@
+import { redirect } from "next/navigation";
+
 import { SignUpFormShell } from "@/components/auth/SignUpFormShell";
+import { areSignupsEnabled } from "@/lib/auth-config";
 
 export default function SignUpPage() {
+  if (!areSignupsEnabled()) {
+    redirect("/sign-in");
+  }
+
   return (
     <section className="grid gap-8 py-12 lg:grid-cols-[minmax(0,20rem)_minmax(24rem,34rem)] lg:justify-between">
       <div className="space-y-5">
