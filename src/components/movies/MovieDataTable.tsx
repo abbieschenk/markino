@@ -45,6 +45,7 @@ const statusOptions: Array<WatchStatus | "all"> = [
   "dnf",
   "dns",
 ];
+const SPLICE_DURATION_MS = 650;
 
 type DropTarget = {
   movieId: string;
@@ -112,12 +113,25 @@ export function MovieDataTable({
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [draggedMovieId, setDraggedMovieId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
+  const [splicedMovieId, setSplicedMovieId] = useState<string | null>(null);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
 
   useEffect(() => {
     setTableData(data);
   }, [data]);
+
+  useEffect(() => {
+    if (!splicedMovieId) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setSplicedMovieId(null);
+    }, SPLICE_DURATION_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [splicedMovieId]);
 
   const watchedWithOptions = useMemo(() => {
     const people = new Set<string>();
@@ -139,6 +153,7 @@ export function MovieDataTable({
     sorting[0]?.id === "rank" &&
     sorting[0].desc === false;
   const canDragReorder = canReorder && !isSavingOrder;
+  const shouldFadeHandles = draggedMovieId !== null;
 
   const table = useReactTable({
     data: tableData,
@@ -177,12 +192,14 @@ export function MovieDataTable({
 
         if (result.status === "error") {
           setTableData(previousData);
+          setSplicedMovieId(null);
           setOrderError(result.message ?? "Unable to save the movie order.");
         }
       } catch (error) {
         console.error("Failed to persist movie order", error);
 
         setTableData(previousData);
+        setSplicedMovieId(null);
         setOrderError("Unable to save the movie order.");
       } finally {
         setIsSavingOrder(false);
@@ -240,6 +257,7 @@ export function MovieDataTable({
     }
 
     setTableData(nextData);
+    setSplicedMovieId(draggedMovieId);
     persistMovieOrder(nextData, previousData);
   }
 
@@ -351,6 +369,8 @@ export function MovieDataTable({
                   dropTarget?.movieId === row.original.movieId &&
                     dropTarget.position === "after" &&
                     "shadow-[inset_0_-2px_0_0_var(--foreground)]",
+                  splicedMovieId === row.original.movieId &&
+                    "movie-row-splice",
                 )}
                 onDragOver={(event) =>
                   handleDragOver(event, row.original.movieId)
@@ -364,7 +384,7 @@ export function MovieDataTable({
                         <button
                           type="button"
                           draggable={canDragReorder}
-                          disabled={!canDragReorder}
+                          disabled={!canReorder}
                           aria-label={`Reorder ${row.original.title}`}
                           title={
                             canDragReorder
@@ -374,10 +394,17 @@ export function MovieDataTable({
                                 : "Sort by rank to reorder"
                           }
                           className={cn(
-                            "-ml-1 flex size-5 items-center justify-center text-muted-foreground",
+                            "-ml-1 flex size-5 items-center justify-center text-muted-foreground transition-opacity ease-out",
+                            shouldFadeHandles
+                              ? "opacity-35 duration-150"
+                              : canReorder
+                                ? "opacity-100 duration-[650ms]"
+                                : "opacity-35 duration-[650ms]",
                             canDragReorder
                               ? "cursor-grab hover:text-foreground active:cursor-grabbing"
-                              : "cursor-not-allowed opacity-35",
+                              : canReorder
+                                ? "cursor-default"
+                                : "cursor-not-allowed",
                           )}
                           onDragStart={(event) =>
                             handleDragStart(event, row.original.movieId)

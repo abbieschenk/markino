@@ -108,6 +108,25 @@ a {
   scrollbar-width: thin;
 }
 
+.movie-row-splice {
+  animation: movie-row-splice 650ms ease-out;
+}
+
+@keyframes movie-row-splice {
+  0% {
+    background-color: #f7f4ec;
+    box-shadow:
+      inset 0 1px 0 0 var(--foreground),
+      inset 0 -1px 0 0 var(--foreground);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow:
+      inset 0 1px 0 0 transparent,
+      inset 0 -1px 0 0 transparent;
+  }
+}
+
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
