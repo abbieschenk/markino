@@ -36,6 +36,13 @@ function SortIcon({ column }: { column: Column<MovieLedgerEntry> }) {
   return <ArrowsDownUp className="size-3" weight="regular" />;
 }
 
+function getSortButtonClassName(column: Column<MovieLedgerEntry>) {
+  return cn(
+    "-ml-2 h-7 px-2 text-[11px] uppercase tracking-[0.18em] hover:bg-transparent hover:text-foreground",
+    column.getIsSorted() ? "font-semibold text-foreground" : "text-muted-foreground",
+  );
+}
+
 export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
   {
     accessorKey: "rank",
@@ -43,7 +50,7 @@ export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
       <Button
         variant="ghost"
         size="sm"
-        className="-ml-2 h-7 px-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:bg-transparent hover:text-foreground"
+        className={getSortButtonClassName(column)}
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         #
@@ -62,7 +69,7 @@ export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
       <Button
         variant="ghost"
         size="sm"
-        className="-ml-2 h-7 px-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:bg-transparent hover:text-foreground"
+        className={getSortButtonClassName(column)}
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Title
@@ -91,7 +98,7 @@ export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
       <Button
         variant="ghost"
         size="sm"
-        className="-ml-2 h-7 px-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:bg-transparent hover:text-foreground"
+        className={getSortButtonClassName(column)}
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Watched
@@ -105,7 +112,7 @@ export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
       <Button
         variant="ghost"
         size="sm"
-        className="-ml-2 h-7 px-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:bg-transparent hover:text-foreground"
+        className={getSortButtonClassName(column)}
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Language
@@ -119,7 +126,7 @@ export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
       <Button
         variant="ghost"
         size="sm"
-        className="-ml-2 h-7 px-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:bg-transparent hover:text-foreground"
+        className={getSortButtonClassName(column)}
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Status
@@ -143,7 +150,7 @@ export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
       <Button
         variant="ghost"
         size="sm"
-        className="-ml-2 h-7 px-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground hover:bg-transparent hover:text-foreground"
+        className={getSortButtonClassName(column)}
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         With
