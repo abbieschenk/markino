@@ -1,11 +1,26 @@
 "use client";
 
-import { startTransition, useEffect, useId, useRef, useState } from "react";
+import { startTransition, useId, useRef, useState } from "react";
 
 import { addMovieEntry } from "@/app/movies/actions";
 import { DatePickerField } from "@/components/movies/DatePickerField";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/Select";
 
 type AddMovieDialogProps = {
   canAdd: boolean;
@@ -33,29 +48,13 @@ export function AddMovieDialog({
     status: "idle",
     message: null,
   });
+  const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]["value"]>("watched");
   const [formKey, setFormKey] = useState(0);
   const formRef = useRef<HTMLFormElement>(null);
-  const dialogTitleId = useId();
   const titleInputId = useId();
   const watchedOnId = useId();
   const languageId = useId();
-  const statusId = useId();
   const watchedWithId = useId();
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -78,167 +77,139 @@ export function AddMovieDialog({
       if (nextState.status === "success") {
         formRef.current?.reset();
         setFormKey((current) => current + 1);
+        setStatus("watched");
         setOpen(false);
       }
     });
   }
 
   return (
-    <>
-      <Button
-        type="button"
-        size="lg"
-        onClick={() => setOpen(true)}
-        disabled={!canAdd}
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button type="button" size="lg" disabled={!canAdd}>
+          Add
+        </Button>
+      </DialogTrigger>
+      <DialogContent
+        showCloseButton={false}
+        className="max-w-2xl rounded-none border border-[var(--border)] bg-[var(--background)] p-0 text-[var(--foreground)] shadow-[0_24px_80px_rgba(0,0,0,0.18)]"
       >
-        Add
-      </Button>
-      {open ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 py-8"
-          onClick={() => setOpen(false)}
+        <form
+          key={formKey}
+          ref={formRef}
+          onSubmit={handleSubmit}
+          className="grid gap-0"
         >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={dialogTitleId}
-            className="w-full max-w-2xl border border-[var(--border)] bg-[var(--background)] shadow-[0_24px_80px_rgba(0,0,0,0.18)]"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <form
-              key={formKey}
-              ref={formRef}
-              onSubmit={handleSubmit}
-              className="grid gap-0"
-            >
-              <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
-                <div className="space-y-1">
-                  <p
-                    id={dialogTitleId}
-                    className="text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--muted-foreground)]"
-                  >
-                    Add Movie
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setOpen(false)}
+          <DialogHeader className="border-b border-[var(--border)] px-4 py-3">
+            <DialogTitle className="text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--muted-foreground)]">
+              Add Movie
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-5 px-4 py-4">
+            <div className="grid gap-1.5">
+              <label
+                htmlFor={titleInputId}
+                className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]"
+              >
+                Title
+              </label>
+              <Input id={titleInputId} name="title" required />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-1.5">
+                <label
+                  htmlFor={watchedOnId}
+                  className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]"
                 >
-                  Close
-                </Button>
+                  Date Watched
+                </label>
+                <DatePickerField id={watchedOnId} name="watchedOn" />
               </div>
-              <div className="grid gap-5 px-4 py-4">
-                <div className="grid gap-1.5">
-                  <label
-                    htmlFor={titleInputId}
-                    className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]"
-                  >
-                    Title
-                  </label>
-                  <Input id={titleInputId} name="title" required />
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="grid gap-1.5">
-                    <label
-                      htmlFor={watchedOnId}
-                      className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]"
-                    >
-                      Date Watched
-                    </label>
-                    <DatePickerField id={watchedOnId} name="watchedOn" />
-                  </div>
-                  <div className="grid gap-1.5">
-                    <label
-                      htmlFor={languageId}
-                      className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]"
-                    >
-                      Language
-                    </label>
-                    <Input
-                      id={languageId}
-                      name="languageWatched"
-                      placeholder="English"
-                    />
-                  </div>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]">
-                  <div className="grid gap-1.5">
-                    <label
-                      htmlFor={statusId}
-                      className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]"
-                    >
-                      Status
-                    </label>
-                    <select
-                      id={statusId}
-                      name="status"
-                      defaultValue="watched"
-                      className="h-9 border border-[var(--border)] bg-[var(--background)] px-3 text-sm outline-none focus:border-[var(--foreground)]"
-                    >
-                      {STATUS_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="grid gap-1.5">
-                    <label
-                      htmlFor={watchedWithId}
-                      className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]"
-                    >
-                      Watched With
-                    </label>
-                    <select
-                      id={watchedWithId}
-                      name="watchedWith"
-                      multiple
-                      size={Math.min(Math.max(watchedWithOptions.length, 4), 8)}
-                      className="min-h-32 border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm outline-none focus:border-[var(--foreground)]"
-                    >
-                      {watchedWithOptions.map((handle) => (
-                        <option key={handle} value={handle}>
-                          {handle}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="text-xs text-[var(--muted-foreground)]">
-                      Hold Command or Ctrl to select multiple handles.
-                    </p>
-                  </div>
-                </div>
-                {state.message ? (
-                  <p
-                    className={
-                      state.status === "error"
-                        ? "border border-[var(--destructive)]/20 bg-[var(--destructive)]/5 px-3 py-2 text-sm text-[var(--destructive)]"
-                        : "border border-[var(--border)] bg-[var(--muted)] px-3 py-2 text-sm"
-                    }
-                  >
-                    {state.message}
-                  </p>
-                ) : null}
+              <div className="grid gap-1.5">
+                <label
+                  htmlFor={languageId}
+                  className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]"
+                >
+                  Language
+                </label>
+                <Input
+                  id={languageId}
+                  name="languageWatched"
+                  placeholder="English"
+                />
               </div>
-              <div className="flex justify-end border-t border-[var(--border)] px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={pending}>
-                    {pending ? "Saving..." : "Confirm"}
-                  </Button>
-                </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]">
+              <div className="grid gap-1.5">
+                <span className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]">
+                  Status
+                </span>
+                <input type="hidden" name="status" value={status} />
+                <Select
+                  value={status}
+                  onValueChange={(value) =>
+                    setStatus(value as (typeof STATUS_OPTIONS)[number]["value"])
+                  }
+                >
+                  <SelectTrigger className="h-9 rounded-none border-[var(--border)] bg-[var(--background)] px-3 shadow-none">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-none border-[var(--border)]">
+                    {STATUS_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </form>
+              <div className="grid gap-1.5">
+                <label
+                  htmlFor={watchedWithId}
+                  className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]"
+                >
+                  Watched With
+                </label>
+                <select
+                  id={watchedWithId}
+                  name="watchedWith"
+                  multiple
+                  size={Math.min(Math.max(watchedWithOptions.length, 4), 8)}
+                  className="min-h-32 border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm outline-none focus:border-[var(--foreground)]"
+                >
+                  {watchedWithOptions.map((handle) => (
+                    <option key={handle} value={handle}>
+                      {handle}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-[var(--muted-foreground)]">
+                  Hold Command or Ctrl to select multiple handles.
+                </p>
+              </div>
+            </div>
+            {state.message ? (
+              <p
+                className={
+                  state.status === "error"
+                    ? "border border-[var(--destructive)]/20 bg-[var(--destructive)]/5 px-3 py-2 text-sm text-[var(--destructive)]"
+                    : "border border-[var(--border)] bg-[var(--muted)] px-3 py-2 text-sm"
+                }
+              >
+                {state.message}
+              </p>
+            ) : null}
           </div>
-        </div>
-      ) : null}
-    </>
+          <DialogFooter className="justify-end rounded-none border-t border-[var(--border)] bg-transparent px-4 py-3">
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={pending}>
+              {pending ? "Saving..." : "Confirm"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

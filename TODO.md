@@ -6,3 +6,14 @@
 - Edit functionality
 - Icons!
 - signup should save username as email in password managers
+- Created On / Created By / Updated On / Updated By on db tables
+- Edit dialog
+- Pull movie data from movie api on add
+- Data visualizations of movies watched
+- Want to Watch List
+  - Upcoming Movies as status
+  - Notifications when released?
+- Movie Recommendations via an LLM integration / API
+- Sign up behind a gate so I can actually release this
+- Friends List that must be mutually accepted instead of having everyone able to add each other
+-

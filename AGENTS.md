@@ -60,7 +60,7 @@ The design for this site is:
 - Keep components small and named clearly
 - Prefer explicit types
 - Avoid unnecessary abstraction
-- Components should have CapitalCase.tsx file names.
+- Components should have lower-kebab-case.tsx file names.
 
 ## Components
 - Use existing shadcn components

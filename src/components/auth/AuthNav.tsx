@@ -2,47 +2,24 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { startTransition, useEffect, useRef, useState } from "react";
+import { startTransition, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { authClient } from "@/lib/auth-client";
 
 export function AuthNav() {
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const [open, setOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    function handlePointerDown(event: MouseEvent) {
-      if (!menuRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
-    }
-
-    window.addEventListener("mousedown", handlePointerDown);
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("mousedown", handlePointerDown);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open]);
 
   async function handleSignOut() {
     setIsSigningOut(true);
-    setOpen(false);
 
     const result = await authClient.signOut();
 
@@ -93,35 +70,30 @@ export function AuthNav() {
     "Account";
 
   return (
-    <div ref={menuRef} className="relative">
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled={isSigningOut}
-        onClick={() => setOpen((current) => !current)}
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button type="button" variant="outline" size="sm" disabled={isSigningOut}>
+          {handle}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        className="min-w-40 rounded-none border border-[var(--border)] bg-[var(--background)] p-1 shadow-[0_16px_40px_rgba(0,0,0,0.12)]"
       >
-        {handle}
-      </Button>
-      {open ? (
-        <div className="absolute top-full right-0 z-20 mt-2 min-w-40 border border-[var(--border)] bg-[var(--background)] py-1 shadow-[0_16px_40px_rgba(0,0,0,0.12)]">
-          <Link
-            href="/settings"
-            className="block px-3 py-2 text-sm text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
-            onClick={() => setOpen(false)}
-          >
-            Settings
-          </Link>
-          <button
-            type="button"
-            className="block w-full px-3 py-2 text-left text-sm text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-50"
-            disabled={isSigningOut}
-            onClick={handleSignOut}
-          >
-            {isSigningOut ? "Signing Out..." : "Sign Out"}
-          </button>
-        </div>
-      ) : null}
-    </div>
+        <DropdownMenuItem asChild className="rounded-none text-[var(--muted-foreground)]">
+          <Link href="/settings">Settings</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="rounded-none text-[var(--muted-foreground)]"
+          disabled={isSigningOut}
+          onSelect={(event) => {
+            event.preventDefault();
+            void handleSignOut();
+          }}
+        >
+          {isSigningOut ? "Signing Out..." : "Sign Out"}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
