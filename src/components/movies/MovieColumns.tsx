@@ -1,8 +1,9 @@
 "use client";
 
-import { ArrowsDownUp } from "@phosphor-icons/react";
+import { ArrowDown, ArrowUp, ArrowsDownUp } from "@phosphor-icons/react";
 import Link from "next/link";
 import type { ColumnDef, FilterFn } from "@tanstack/react-table";
+import type { Column } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { DeleteMovieButton } from "@/components/movies/DeleteMovieButton";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,20 @@ const watchedWithFilter: FilterFn<MovieLedgerEntry> = (
   return people.includes(filterValue);
 };
 
+function SortIcon({ column }: { column: Column<MovieLedgerEntry> }) {
+  const sorted = column.getIsSorted();
+
+  if (sorted === "asc") {
+    return <ArrowUp className="size-3" weight="regular" />;
+  }
+
+  if (sorted === "desc") {
+    return <ArrowDown className="size-3" weight="regular" />;
+  }
+
+  return <ArrowsDownUp className="size-3" weight="regular" />;
+}
+
 export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
   {
     accessorKey: "rank",
@@ -32,7 +47,7 @@ export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         #
-        <ArrowsDownUp className="size-3" weight="regular" />
+        <SortIcon column={column} />
       </Button>
     ),
     cell: ({ row }) => (
@@ -51,7 +66,7 @@ export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Title
-        <ArrowsDownUp className="size-3" weight="regular" />
+        <SortIcon column={column} />
       </Button>
     ),
     cell: ({ row }) => {
@@ -80,7 +95,7 @@ export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Watched
-        <ArrowsDownUp className="size-3" weight="regular" />
+        <SortIcon column={column} />
       </Button>
     ),
   },
@@ -94,7 +109,7 @@ export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Language
-        <ArrowsDownUp className="size-3" weight="regular" />
+        <SortIcon column={column} />
       </Button>
     ),
   },
@@ -108,7 +123,7 @@ export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Status
-        <ArrowsDownUp className="size-3" weight="regular" />
+        <SortIcon column={column} />
       </Button>
     ),
     cell: ({ row }) => {
@@ -132,7 +147,7 @@ export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         With
-        <ArrowsDownUp className="size-3" weight="regular" />
+        <SortIcon column={column} />
       </Button>
     ),
     cell: ({ row }) => {
