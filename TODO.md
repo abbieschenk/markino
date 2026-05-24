@@ -1,17 +1,14 @@
 - Status in add dialog is weird, UI-wise
-- Watched With should be a better component / UI
 - Optimistic UI for add and delete
 - Edit functionality
 - Icons!
-- signup should save username as email in password managers
 - Created On / Created By / Updated On / Updated By on db tables
 - Edit dialog
 - Pull movie data from movie api on add
-- Data visualizations of movies watched
+- Data visualizations of movies watched, by genre, by year, etc. to find gaps in what you've watched too
 - Want to Watch List
   - Upcoming Movies as status
   - Notifications when released?
 - Movie Recommendations via an LLM integration / API
-- Sign up behind a gate so I can actually release this
 - Friends List that must be mutually accepted instead of having everyone able to add each other
 -
