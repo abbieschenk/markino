@@ -1,7 +1,7 @@
 "use client";
 
+import { CalendarBlank } from "@phosphor-icons/react";
 import { format, parse } from "date-fns";
-import { CalendarIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -38,7 +38,7 @@ export function DatePickerField({ id, name }: DatePickerFieldProps) {
               !selectedDate && "text-[var(--muted-foreground)]",
             )}
           >
-            <CalendarIcon className="size-4" />
+            <CalendarBlank className="size-4" weight="regular" />
             {selectedDate ? format(selectedDate, "PPP") : "Select date"}
           </Button>
         </PopoverTrigger>

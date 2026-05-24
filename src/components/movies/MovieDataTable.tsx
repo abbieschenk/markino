@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable react-hooks/incompatible-library */
 
-import { GripVertical } from "lucide-react";
+import { DotsSixVertical } from "@phosphor-icons/react";
 import { startTransition, useEffect, useMemo, useState } from "react";
 import type { DragEvent, ReactNode } from "react";
 import {
@@ -411,7 +411,7 @@ export function MovieDataTable({
                           }
                           onDragEnd={handleDragEnd}
                         >
-                          <GripVertical className="size-3.5" />
+                    <DotsSixVertical className="size-3.5" weight="regular" />
                         </button>
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </div>

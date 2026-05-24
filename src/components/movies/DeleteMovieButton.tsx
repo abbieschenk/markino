@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { startTransition, useState } from "react";
 
@@ -53,10 +54,13 @@ export function DeleteMovieButton({
         <Button
           type="button"
           variant="ghost"
-          size="sm"
-          className="h-7 px-2 text-[11px] uppercase tracking-[0.18em] text-[var(--muted-foreground)] hover:text-[var(--destructive)]"
+          size="icon-sm"
+          className="text-[var(--muted-foreground)] hover:bg-transparent hover:text-[var(--destructive)]"
+          aria-label={`Delete ${title}`}
+          title={`Delete ${title}`}
         >
-          Delete
+          <X aria-hidden="true" size={14} weight="regular" />
+          <span className="sr-only">Delete</span>
         </Button>
       </DialogTrigger>
       <DialogContent
