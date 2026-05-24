@@ -381,38 +381,40 @@ export function MovieDataTable({
                   <TableCell key={cell.id}>
                     {cell.column.id === "rank" ? (
                       <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          draggable={canDragReorder}
-                          disabled={!canReorder}
-                          aria-label={`Reorder ${row.original.title}`}
-                          title={
-                            canDragReorder
-                              ? "Drag to reorder"
-                              : isSavingOrder
-                                ? "Saving order"
-                                : "Sort by rank to reorder"
-                          }
-                          className={cn(
-                            "-ml-1 flex size-5 items-center justify-center text-muted-foreground transition-opacity ease-out",
-                            shouldFadeHandles
-                              ? "opacity-35 duration-150"
-                              : canReorder
-                                ? "opacity-100 duration-[650ms]"
-                                : "opacity-35 duration-[650ms]",
-                            canDragReorder
-                              ? "cursor-grab hover:text-foreground active:cursor-grabbing"
-                              : canReorder
-                                ? "cursor-default"
-                                : "cursor-not-allowed",
-                          )}
-                          onDragStart={(event) =>
-                            handleDragStart(event, row.original.movieId)
-                          }
-                          onDragEnd={handleDragEnd}
-                        >
-                    <DotsSixVertical className="size-3.5" weight="regular" />
-                        </button>
+                        {canReorder ? (
+                          <button
+                            type="button"
+                            draggable={canDragReorder}
+                            disabled={!canDragReorder}
+                            aria-label={`Reorder ${row.original.title}`}
+                            title={
+                              canDragReorder ? "Drag to reorder" : "Saving order"
+                            }
+                            className={cn(
+                              "-ml-1 flex size-5 items-center justify-center text-muted-foreground transition-opacity ease-out",
+                              shouldFadeHandles
+                                ? "opacity-35 duration-150"
+                                : "opacity-100 duration-[650ms]",
+                              canDragReorder
+                                ? "cursor-grab hover:text-foreground active:cursor-grabbing"
+                                : "cursor-default",
+                            )}
+                            onDragStart={(event) =>
+                              handleDragStart(event, row.original.movieId)
+                            }
+                            onDragEnd={handleDragEnd}
+                          >
+                            <DotsSixVertical
+                              className="size-3.5"
+                              weight="regular"
+                            />
+                          </button>
+                        ) : (
+                          <span
+                            aria-hidden="true"
+                            className="-ml-1 block size-5 shrink-0"
+                          />
+                        )}
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </div>
                     ) : (
