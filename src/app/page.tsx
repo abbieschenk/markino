@@ -12,7 +12,12 @@ export default async function Home() {
   const signupsEnabled = areSignupsEnabled();
 
   if (session?.user?.id) {
-    return <MoviesScreen userId={session.user.id} />;
+    return (
+      <MoviesScreen
+        userId={session.user.id}
+        canSyncMetadata={session.user.role === "superadmin"}
+      />
+    );
   }
 
   return (

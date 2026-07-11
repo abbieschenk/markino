@@ -3,7 +3,12 @@ import "server-only";
 import { and, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
-import { movieRankings, watchEntryParticipants, watchEntries } from "@/db/schema";
+import {
+  movieRankings,
+  movies,
+  watchEntryParticipants,
+  watchEntries,
+} from "@/db/schema";
 
 export type WatchStatus = "watched" | "dnf" | "dns";
 
@@ -13,10 +18,29 @@ export type MovieLedgerEntry = {
   watchEntryId: string;
   rank: number;
   title: string;
+  isMetadataSynced: boolean;
   watchedOn: string;
   language: string;
   status: WatchStatus;
   watchedWith: string[];
+};
+
+export type MovieDetail = MovieLedgerEntry & {
+  releaseYear: number | null;
+  originalLanguage: string | null;
+  tmdbId: number | null;
+  tagline: string | null;
+  director: string | null;
+  writer: string | null;
+  editor: string | null;
+  metadataSyncedAt: Date | null;
+  productionCountries: string[];
+  spokenLanguages: string[];
+  studios: string[];
+  cast: {
+    name: string;
+    character: string | null;
+  }[];
 };
 
 async function getOwnedWatchEntries(userId: string) {
@@ -114,6 +138,7 @@ function mapLedgerEntry(
     watchEntryId: entry.id,
     rank,
     title: entry.movie.title,
+    isMetadataSynced: entry.movie.tmdbId != null,
     watchedOn: entry.watchedOn,
     language: entry.languageWatched,
     status: entry.status,
@@ -217,5 +242,71 @@ export async function getMovieLedgerForUser(
 
 export async function getMovieByIdForUser(movieId: string, userId: string) {
   const entries = await getMovieLedgerForUser(userId);
-  return entries.find((entry) => entry.id === movieId) ?? null;
+  const entry = entries.find((ledgerEntry) => ledgerEntry.id === movieId);
+
+  if (!entry) {
+    return null;
+  }
+
+  const movie = await db.query.movies.findFirst({
+    where: eq(movies.id, movieId),
+    with: {
+      productionCountries: {
+        with: {
+          country: true,
+        },
+      },
+      spokenLanguages: {
+        with: {
+          language: true,
+        },
+      },
+      studios: {
+        with: {
+          studio: true,
+        },
+      },
+      credits: {
+        with: {
+          person: true,
+        },
+      },
+    },
+  });
+
+  if (!movie) {
+    return null;
+  }
+
+  return {
+    ...entry,
+    releaseYear: movie.releaseYear,
+    originalLanguage: movie.originalLanguage,
+    tmdbId: movie.tmdbId,
+    tagline: movie.tagline,
+    director: movie.director,
+    writer: movie.writer,
+    editor: movie.editor,
+    metadataSyncedAt: movie.metadataSyncedAt,
+    productionCountries: movie.productionCountries
+      .map((country) => country.country.name)
+      .sort((left, right) => left.localeCompare(right, "en")),
+    spokenLanguages: movie.spokenLanguages
+      .map((language) => language.language.name)
+      .sort((left, right) => left.localeCompare(right, "en")),
+    studios: movie.studios
+      .map((studio) => studio.studio.name)
+      .sort((left, right) => left.localeCompare(right, "en")),
+    cast: movie.credits
+      .filter((credit) => credit.creditType === "cast")
+      .sort(
+        (left, right) =>
+          (left.creditOrder ?? 9999) - (right.creditOrder ?? 9999),
+      )
+      .slice(0, 16)
+      .map((credit) => ({
+        name: credit.person.name,
+        character: credit.character,
+      })),
+  } satisfies MovieDetail;
 }

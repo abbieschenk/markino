@@ -103,6 +103,11 @@ export const userRoleEnum = pgEnum("user_role", [
   "superadmin",
 ]);
 
+export const movieCreditTypeEnum = pgEnum("movie_credit_type", [
+  "cast",
+  "crew",
+]);
+
 export const users = pgTable(
   "users",
   {
@@ -134,6 +139,11 @@ export const movies = pgTable(
     releaseYear: integer("release_year"),
     originalLanguage: varchar("original_language", { length: 32 }),
     tmdbId: integer("tmdb_id"),
+    tagline: text("tagline"),
+    director: text("director"),
+    writer: text("writer"),
+    editor: text("editor"),
+    metadataSyncedAt: timestamp("metadata_synced_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -144,6 +154,120 @@ export const movies = pgTable(
   (table) => [
     uniqueIndex("movies_tmdb_id_unique").on(table.tmdbId),
     index("movies_title_idx").on(table.title),
+  ],
+);
+
+export const productionCountries = pgTable("production_countries", {
+  isoCode: varchar("iso_code", { length: 8 }).primaryKey(),
+  name: text("name").notNull(),
+});
+
+export const movieProductionCountries = pgTable(
+  "movie_production_countries",
+  {
+    movieId: uuid("movie_id")
+      .notNull()
+      .references(() => movies.id, { onDelete: "cascade" }),
+    countryCode: varchar("country_code", { length: 8 })
+      .notNull()
+      .references(() => productionCountries.isoCode, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.movieId, table.countryCode],
+      name: "movie_production_countries_pk",
+    }),
+    index("movie_production_countries_country_code_idx").on(table.countryCode),
+  ],
+);
+
+export const spokenLanguages = pgTable("spoken_languages", {
+  isoCode: varchar("iso_code", { length: 16 }).primaryKey(),
+  name: text("name").notNull(),
+});
+
+export const movieSpokenLanguages = pgTable(
+  "movie_spoken_languages",
+  {
+    movieId: uuid("movie_id")
+      .notNull()
+      .references(() => movies.id, { onDelete: "cascade" }),
+    languageCode: varchar("language_code", { length: 16 })
+      .notNull()
+      .references(() => spokenLanguages.isoCode, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.movieId, table.languageCode],
+      name: "movie_spoken_languages_pk",
+    }),
+    index("movie_spoken_languages_language_code_idx").on(table.languageCode),
+  ],
+);
+
+export const studios = pgTable(
+  "studios",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tmdbCompanyId: integer("tmdb_company_id").notNull(),
+    name: text("name").notNull(),
+    originCountry: varchar("origin_country", { length: 8 }),
+  },
+  (table) => [
+    uniqueIndex("studios_tmdb_company_id_unique").on(table.tmdbCompanyId),
+  ],
+);
+
+export const movieStudios = pgTable(
+  "movie_studios",
+  {
+    movieId: uuid("movie_id")
+      .notNull()
+      .references(() => movies.id, { onDelete: "cascade" }),
+    studioId: uuid("studio_id")
+      .notNull()
+      .references(() => studios.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.movieId, table.studioId],
+      name: "movie_studios_pk",
+    }),
+    index("movie_studios_studio_id_idx").on(table.studioId),
+  ],
+);
+
+export const people = pgTable(
+  "people",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tmdbPersonId: integer("tmdb_person_id").notNull(),
+    name: text("name").notNull(),
+  },
+  (table) => [
+    uniqueIndex("people_tmdb_person_id_unique").on(table.tmdbPersonId),
+  ],
+);
+
+export const movieCredits = pgTable(
+  "movie_credits",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    movieId: uuid("movie_id")
+      .notNull()
+      .references(() => movies.id, { onDelete: "cascade" }),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => people.id, { onDelete: "cascade" }),
+    creditType: movieCreditTypeEnum("credit_type").notNull(),
+    department: text("department"),
+    job: text("job"),
+    character: text("character"),
+    creditOrder: integer("credit_order"),
+  },
+  (table) => [
+    index("movie_credits_movie_id_idx").on(table.movieId),
+    index("movie_credits_person_id_idx").on(table.personId),
   ],
 );
 
@@ -234,6 +358,82 @@ export const usersRelations = relations(users, ({ many }) => ({
 export const moviesRelations = relations(movies, ({ many }) => ({
   watchEntries: many(watchEntries),
   movieRankings: many(movieRankings),
+  productionCountries: many(movieProductionCountries),
+  spokenLanguages: many(movieSpokenLanguages),
+  studios: many(movieStudios),
+  credits: many(movieCredits),
+}));
+
+export const productionCountriesRelations = relations(
+  productionCountries,
+  ({ many }) => ({
+    movies: many(movieProductionCountries),
+  }),
+);
+
+export const movieProductionCountriesRelations = relations(
+  movieProductionCountries,
+  ({ one }) => ({
+    movie: one(movies, {
+      fields: [movieProductionCountries.movieId],
+      references: [movies.id],
+    }),
+    country: one(productionCountries, {
+      fields: [movieProductionCountries.countryCode],
+      references: [productionCountries.isoCode],
+    }),
+  }),
+);
+
+export const spokenLanguagesRelations = relations(
+  spokenLanguages,
+  ({ many }) => ({
+    movies: many(movieSpokenLanguages),
+  }),
+);
+
+export const movieSpokenLanguagesRelations = relations(
+  movieSpokenLanguages,
+  ({ one }) => ({
+    movie: one(movies, {
+      fields: [movieSpokenLanguages.movieId],
+      references: [movies.id],
+    }),
+    language: one(spokenLanguages, {
+      fields: [movieSpokenLanguages.languageCode],
+      references: [spokenLanguages.isoCode],
+    }),
+  }),
+);
+
+export const studiosRelations = relations(studios, ({ many }) => ({
+  movies: many(movieStudios),
+}));
+
+export const movieStudiosRelations = relations(movieStudios, ({ one }) => ({
+  movie: one(movies, {
+    fields: [movieStudios.movieId],
+    references: [movies.id],
+  }),
+  studio: one(studios, {
+    fields: [movieStudios.studioId],
+    references: [studios.id],
+  }),
+}));
+
+export const peopleRelations = relations(people, ({ many }) => ({
+  credits: many(movieCredits),
+}));
+
+export const movieCreditsRelations = relations(movieCredits, ({ one }) => ({
+  movie: one(movies, {
+    fields: [movieCredits.movieId],
+    references: [movies.id],
+  }),
+  person: one(people, {
+    fields: [movieCredits.personId],
+    references: [people.id],
+  }),
 }));
 
 export const watchEntriesRelations = relations(watchEntries, ({ one, many }) => ({

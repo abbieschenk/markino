@@ -3,12 +3,28 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
+import { SyncMovieMetadataButton } from "@/components/movies/sync-movie-metadata-button";
 import { auth } from "@/lib/auth";
 import { getMovieByIdForUser } from "@/lib/movies";
 
 type MovieDetailPageProps = {
   params: Promise<{ id: string }>;
 };
+
+function joinValues(values: string[]) {
+  return values.length > 0 ? values.join(", ") : "-";
+}
+
+function formatSyncedAt(value: Date | null) {
+  if (!value) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(value);
+}
 
 export async function generateMetadata({
   params,
@@ -41,6 +57,13 @@ export default async function MovieDetailPage({
     notFound();
   }
 
+  const canSyncMetadata = session?.user.role === "superadmin";
+  const hasCredits =
+    Boolean(movie.director) ||
+    Boolean(movie.writer) ||
+    Boolean(movie.editor) ||
+    movie.cast.length > 0;
+
   return (
     <section className="space-y-6">
       <div className="space-y-2">
@@ -50,14 +73,20 @@ export default async function MovieDetailPage({
         >
           Movies
         </Link>
-        <div className="space-y-1">
-          <h1 className="text-3xl font-medium tracking-[-0.04em]">
-            {movie.title}
-          </h1>
-          <p className="text-sm text-[var(--muted-foreground)]">
-            Placeholder detail page for a future watch history, notes, and
-            ranking timeline.
-          </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-medium tracking-[-0.04em]">
+              {movie.title}
+            </h1>
+            {movie.tagline ? (
+              <p className="text-sm text-[var(--muted-foreground)]">
+                {movie.tagline}
+              </p>
+            ) : null}
+          </div>
+          {canSyncMetadata ? (
+            <SyncMovieMetadataButton movieId={movie.movieId} title={movie.title} />
+          ) : null}
         </div>
       </div>
       <dl className="grid border border-[var(--border)] text-sm sm:grid-cols-2">
@@ -78,6 +107,114 @@ export default async function MovieDetailPage({
           <dd>{movie.status}</dd>
         </div>
       </dl>
+      {movie.isMetadataSynced ? (
+        <>
+          <section className="border border-[var(--border)]">
+            <div className="border-b border-[var(--border)] px-4 py-3 text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--muted-foreground)]">
+              TMDB Metadata
+            </div>
+            <dl className="grid text-sm sm:grid-cols-2">
+              <div className="grid grid-cols-[9rem_1fr] border-b border-[var(--border)] px-4 py-3 sm:border-r">
+                <dt className="text-[var(--muted-foreground)]">TMDB ID</dt>
+                <dd>
+                  {movie.tmdbId ? (
+                    <a
+                      href={`https://www.themoviedb.org/movie/${movie.tmdbId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="hover:underline"
+                    >
+                      {movie.tmdbId}
+                    </a>
+                  ) : (
+                    "-"
+                  )}
+                </dd>
+              </div>
+              <div className="grid grid-cols-[9rem_1fr] border-b border-[var(--border)] px-4 py-3">
+                <dt className="text-[var(--muted-foreground)]">Release</dt>
+                <dd>{movie.releaseYear ?? "-"}</dd>
+              </div>
+              <div className="grid grid-cols-[9rem_1fr] border-b border-[var(--border)] px-4 py-3 sm:border-r sm:border-b-0">
+                <dt className="text-[var(--muted-foreground)]">Original Lang</dt>
+                <dd>{movie.originalLanguage ?? "-"}</dd>
+              </div>
+              <div className="grid grid-cols-[9rem_1fr] px-4 py-3">
+                <dt className="text-[var(--muted-foreground)]">Synced</dt>
+                <dd>{formatSyncedAt(movie.metadataSyncedAt)}</dd>
+              </div>
+            </dl>
+          </section>
+          <section className="border border-[var(--border)]">
+            <div className="border-b border-[var(--border)] px-4 py-3 text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--muted-foreground)]">
+              Production
+            </div>
+            <dl className="grid text-sm">
+              <div className="grid grid-cols-[9rem_1fr] border-b border-[var(--border)] px-4 py-3">
+                <dt className="text-[var(--muted-foreground)]">Countries</dt>
+                <dd>{joinValues(movie.productionCountries)}</dd>
+              </div>
+              <div className="grid grid-cols-[9rem_1fr] border-b border-[var(--border)] px-4 py-3">
+                <dt className="text-[var(--muted-foreground)]">Languages</dt>
+                <dd>{joinValues(movie.spokenLanguages)}</dd>
+              </div>
+              <div className="grid grid-cols-[9rem_1fr] px-4 py-3">
+                <dt className="text-[var(--muted-foreground)]">Studios</dt>
+                <dd>{joinValues(movie.studios)}</dd>
+              </div>
+            </dl>
+          </section>
+          {hasCredits ? (
+            <section className="border border-[var(--border)]">
+              <div className="border-b border-[var(--border)] px-4 py-3 text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--muted-foreground)]">
+                Credits
+              </div>
+              <dl className="grid text-sm">
+                {movie.director ? (
+                  <div className="grid grid-cols-[9rem_1fr] border-b border-[var(--border)] px-4 py-3">
+                    <dt className="text-[var(--muted-foreground)]">Director</dt>
+                    <dd>{movie.director}</dd>
+                  </div>
+                ) : null}
+                {movie.writer ? (
+                  <div className="grid grid-cols-[9rem_1fr] border-b border-[var(--border)] px-4 py-3">
+                    <dt className="text-[var(--muted-foreground)]">Writer</dt>
+                    <dd>{movie.writer}</dd>
+                  </div>
+                ) : null}
+                {movie.editor ? (
+                  <div className="grid grid-cols-[9rem_1fr] border-b border-[var(--border)] px-4 py-3">
+                    <dt className="text-[var(--muted-foreground)]">Editor</dt>
+                    <dd>{movie.editor}</dd>
+                  </div>
+                ) : null}
+                {movie.cast.length > 0 ? (
+                  <div className="grid grid-cols-[9rem_1fr] px-4 py-3">
+                    <dt className="text-[var(--muted-foreground)]">Cast</dt>
+                    <dd className="grid gap-1">
+                      {movie.cast.map((credit) => (
+                        <span key={`${credit.name}-${credit.character ?? ""}`}>
+                          {credit.name}
+                          {credit.character ? (
+                            <span className="text-[var(--muted-foreground)]">
+                              {" "}
+                              as {credit.character}
+                            </span>
+                          ) : null}
+                        </span>
+                      ))}
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+            </section>
+          ) : null}
+        </>
+      ) : (
+        <section className="border border-[var(--border)] px-4 py-3 text-sm text-[var(--muted-foreground)]">
+          TMDB metadata has not been synced.
+        </section>
+      )}
       <section className="border border-[var(--border)]">
         <div className="border-b border-[var(--border)] px-4 py-3 text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--muted-foreground)]">
           Watched With

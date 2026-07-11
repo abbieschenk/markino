@@ -334,6 +334,8 @@ export function MovieDataTable({
                       ? "w-16"
                       : header.column.id === "watchedOn"
                         ? "w-36"
+                        : header.column.id === "isMetadataSynced"
+                          ? "w-24"
                         : header.column.id === "language"
                           ? "w-28"
                           : header.column.id === "status"

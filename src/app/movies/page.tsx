@@ -18,5 +18,10 @@ export default async function MoviesPage() {
     redirect("/sign-in");
   }
 
-  return <MoviesScreen userId={session.user.id} />;
+  return (
+    <MoviesScreen
+      userId={session.user.id}
+      canSyncMetadata={session.user.role === "superadmin"}
+    />
+  );
 }

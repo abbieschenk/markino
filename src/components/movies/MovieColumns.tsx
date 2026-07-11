@@ -1,11 +1,12 @@
 "use client";
 
-import { ArrowDown, ArrowUp, ArrowsDownUp } from "@phosphor-icons/react";
+import { ArrowDown, ArrowUp, ArrowsDownUp, Check } from "@phosphor-icons/react";
 import Link from "next/link";
 import type { ColumnDef, FilterFn } from "@tanstack/react-table";
 import type { Column } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { DeleteMovieButton } from "@/components/movies/DeleteMovieButton";
+import { SyncMovieMetadataButton } from "@/components/movies/sync-movie-metadata-button";
 import { cn } from "@/lib/utils";
 import type { MovieLedgerEntry } from "@/lib/movies";
 
@@ -43,7 +44,14 @@ function getSortButtonClassName(column: Column<MovieLedgerEntry>) {
   );
 }
 
-export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
+type MovieColumnsOptions = {
+  canSyncMetadata: boolean;
+};
+
+export function createMovieColumns({
+  canSyncMetadata,
+}: MovieColumnsOptions): ColumnDef<MovieLedgerEntry>[] {
+  return [
   {
     accessorKey: "rank",
     header: ({ column }) => (
@@ -171,6 +179,30 @@ export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
     },
   },
   {
+    accessorKey: "isMetadataSynced",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        size="sm"
+        className={getSortButtonClassName(column)}
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Synced
+        <SortIcon column={column} />
+      </Button>
+    ),
+    cell: ({ row }) => (
+      <SyncedCell
+        canSyncMetadata={canSyncMetadata}
+        isSynced={row.getValue<boolean>("isMetadataSynced")}
+        movieId={row.original.movieId}
+        title={row.original.title}
+      />
+    ),
+    sortingFn: "basic",
+    enableColumnFilter: false,
+  },
+  {
     id: "actions",
     header: "",
     cell: ({ row }) => (
@@ -184,4 +216,47 @@ export const movieColumns: ColumnDef<MovieLedgerEntry>[] = [
     enableSorting: false,
     enableColumnFilter: false,
   },
-];
+  ];
+}
+
+function SyncedCell({
+  canSyncMetadata,
+  isSynced,
+  movieId,
+  title,
+}: {
+  canSyncMetadata: boolean;
+  isSynced: boolean;
+  movieId: string;
+  title: string;
+}) {
+  if (isSynced) {
+    return (
+      <span
+        className="flex justify-center text-[var(--muted-foreground)]"
+        title="Synced"
+      >
+        <Check aria-hidden="true" size={14} weight="regular" />
+        <span className="sr-only">Synced</span>
+      </span>
+    );
+  }
+
+  if (canSyncMetadata) {
+    return (
+      <div className="flex justify-center">
+        <SyncMovieMetadataButton
+          display="icon"
+          movieId={movieId}
+          title={title}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <span className="flex justify-center text-[var(--muted-foreground)]">
+      -
+    </span>
+  );
+}

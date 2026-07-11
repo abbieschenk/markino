@@ -8,9 +8,13 @@ import { getMovieLedgerForUser } from "@/lib/movies";
 
 type MoviesScreenProps = {
   userId: string;
+  canSyncMetadata?: boolean;
 };
 
-export async function MoviesScreen({ userId }: MoviesScreenProps) {
+export async function MoviesScreen({
+  userId,
+  canSyncMetadata = false,
+}: MoviesScreenProps) {
   const movieLedger = await getMovieLedgerForUser(userId);
   const watchedWithOptions = await db
     .select({ handle: users.handle })
@@ -21,6 +25,7 @@ export async function MoviesScreen({ userId }: MoviesScreenProps) {
   return (
     <MovieLedger
       data={movieLedger}
+      canSyncMetadata={canSyncMetadata}
       toolbarActions={
         <AddMovieDialog
           canAdd
