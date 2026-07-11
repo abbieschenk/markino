@@ -37,7 +37,7 @@ export default async function ChartsPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <ChartPanel title="Watched Over Time" eyebrow="Last 12 months">
+        <ChartPanel title="Watched Over Time" eyebrow="All time">
           <WatchedOverTimeChart data={stats.monthlyWatched} />
         </ChartPanel>
 

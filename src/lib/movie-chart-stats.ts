@@ -34,22 +34,47 @@ type MovieTooltipEntry = {
   title: string;
 };
 
-function formatMonthKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+function getMonthIndex(month: string) {
+  const [year, monthNumber] = month.split("-").map(Number);
+
+  return year * 12 + monthNumber - 1;
 }
 
-function getLastTwelveMonths() {
-  const now = new Date();
+function formatMonthFromIndex(monthIndex: number) {
+  const year = Math.floor(monthIndex / 12);
+  const month = monthIndex % 12;
+
+  return `${year}-${String(month + 1).padStart(2, "0")}`;
+}
+
+function getAllWatchedMonths(watchedOnDates: Iterable<string>) {
+  const monthIndexes = Array.from(
+    new Set(
+      Array.from(watchedOnDates, (watchedOn) =>
+        getMonthIndex(watchedOn.slice(0, 7)),
+      ),
+    ),
+  );
+
+  if (monthIndexes.length === 0) {
+    return [];
+  }
+
+  const firstMonth = Math.min(...monthIndexes);
+  const lastMonth = Math.max(...monthIndexes);
   const formatter = new Intl.DateTimeFormat("en", {
     month: "short",
     year: "2-digit",
   });
 
-  return Array.from({ length: 12 }, (_, index) => {
-    const date = new Date(now.getFullYear(), now.getMonth() - 11 + index, 1);
+  return Array.from({ length: lastMonth - firstMonth + 1 }, (_, index) => {
+    const monthIndex = firstMonth + index;
+    const month = formatMonthFromIndex(monthIndex);
+    const [year, monthNumber] = month.split("-").map(Number);
+    const date = new Date(year, monthNumber - 1, 1);
 
     return {
-      month: formatMonthKey(date),
+      month,
       label: formatter.format(date),
       count: 0,
       movies: [],
@@ -247,7 +272,9 @@ export async function getMovieChartStatsForUser(
   const rankByMovieId = new Map(
     rankedLedger.map((entry) => [entry.movieId, entry.rank]),
   );
-  const monthlyWatched = getLastTwelveMonths();
+  const monthlyWatched = getAllWatchedMonths(
+    visibleEntries.map((entry) => entry.watchedOn),
+  );
   const moviesByMonth = new Map<string, MovieTooltipEntry[]>(
     monthlyWatched.map((month) => [month.month, []]),
   );

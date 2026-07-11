@@ -27,7 +27,7 @@ export function WatchedOverTimeChart({ data }: WatchedOverTimeChartProps) {
   if (!hasData) {
     return (
       <div className="flex h-[220px] items-center justify-center border border-dashed border-[var(--border)] text-sm text-[var(--muted-foreground)]">
-        No watched entries in the last 12 months.
+        No watched entries yet.
       </div>
     );
   }
@@ -44,7 +44,8 @@ export function WatchedOverTimeChart({ data }: WatchedOverTimeChartProps) {
           tickLine={false}
           axisLine={false}
           tickMargin={8}
-          interval={1}
+          interval="preserveStartEnd"
+          minTickGap={18}
         />
         <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
         <ChartTooltip
