@@ -36,6 +36,13 @@ type MovieActionResult = {
   status: "error" | "success";
   message: string | null;
 };
+type MovieEntryInput = {
+  title: string;
+  watchedOn: string;
+  languageWatched: string;
+  rawStatus: string;
+  watchedWithHandles: string[];
+};
 type TmdbSearchResult =
   | { status: "success"; message: null; matches: TmdbMovieMatch[] }
   | { status: "error"; message: string; matches: [] };
@@ -46,6 +53,50 @@ function parseWatchStatus(value: string): WatchStatusValue | null {
   }
 
   return value as WatchStatusValue;
+}
+
+function getUniqueHandles(values: FormDataEntryValue[]) {
+  return Array.from(
+    new Set(
+      values
+        .map((value) => String(value).trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  );
+}
+
+function parseMovieEntryInputs(formData: FormData): MovieEntryInput[] {
+  const rowIds = formData
+    .getAll("movieRowId")
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+
+  if (rowIds.length === 0) {
+    return [
+      {
+        title: String(formData.get("title") ?? "").trim(),
+        watchedOn: String(formData.get("watchedOn") ?? "").trim(),
+        languageWatched:
+          String(formData.get("languageWatched") ?? "").trim() || "English",
+        rawStatus: String(formData.get("status") ?? "watched")
+          .trim()
+          .toLowerCase(),
+        watchedWithHandles: getUniqueHandles(formData.getAll("watchedWith")),
+      },
+    ];
+  }
+
+  return Array.from(new Set(rowIds)).map((rowId) => ({
+    title: String(formData.get(`title:${rowId}`) ?? "").trim(),
+    watchedOn: String(formData.get(`watchedOn:${rowId}`) ?? "").trim(),
+    languageWatched:
+      String(formData.get(`languageWatched:${rowId}`) ?? "").trim() ||
+      "English",
+    rawStatus: String(formData.get(`status:${rowId}`) ?? "watched")
+      .trim()
+      .toLowerCase(),
+    watchedWithHandles: getUniqueHandles(formData.getAll(`watchedWith:${rowId}`)),
+  }));
 }
 
 async function requireSuperadmin() {
@@ -133,47 +184,62 @@ export async function addMovieEntry(
     };
   }
 
-  const title = String(formData.get("title") ?? "").trim();
-  const watchedOn = String(formData.get("watchedOn") ?? "").trim();
-  const languageWatched =
-    String(formData.get("languageWatched") ?? "").trim() || "English";
-  const rawStatus = String(formData.get("status") ?? "watched")
-    .trim()
-    .toLowerCase();
-  const watchedWithHandles = Array.from(
-    new Set(
-      formData
-        .getAll("watchedWith")
-        .map((value) => String(value).trim().toLowerCase())
-        .filter(Boolean),
-    ),
+  const entries = parseMovieEntryInputs(formData);
+
+  if (entries.length === 0) {
+    return {
+      status: "error",
+      message: "Add at least one movie.",
+    };
+  }
+
+  const missingTitleIndex = entries.findIndex((entry) => !entry.title);
+  if (missingTitleIndex >= 0) {
+    return {
+      status: "error",
+      message:
+        entries.length === 1
+          ? "Title is required."
+          : `Row ${missingTitleIndex + 1}: title is required.`,
+    };
+  }
+
+  const missingWatchedOnIndex = entries.findIndex((entry) => !entry.watchedOn);
+  if (missingWatchedOnIndex >= 0) {
+    return {
+      status: "error",
+      message:
+        entries.length === 1
+          ? "Date watched is required."
+          : `Row ${missingWatchedOnIndex + 1}: date watched is required.`,
+    };
+  }
+
+  const entriesWithStatus = entries.map((entry) => ({
+    ...entry,
+    status: parseWatchStatus(entry.rawStatus),
+  }));
+  const invalidStatusIndex = entriesWithStatus.findIndex(
+    (entry) => !entry.status,
   );
-
-  if (!title) {
+  if (invalidStatusIndex >= 0) {
     return {
       status: "error",
-      message: "Title is required.",
+      message:
+        entries.length === 1
+          ? "Watch status is invalid."
+          : `Row ${invalidStatusIndex + 1}: watch status is invalid.`,
     };
   }
 
-  if (!watchedOn) {
-    return {
-      status: "error",
-      message: "Date watched is required.",
-    };
-  }
-
-  const status = parseWatchStatus(rawStatus);
-
-  if (!status) {
-    return {
-      status: "error",
-      message: "Watch status is invalid.",
-    };
-  }
-
-  const participantHandles = watchedWithHandles.filter(
-    (handle) => handle !== session.user.handle,
+  const participantHandles = Array.from(
+    new Set(
+      entries.flatMap((entry) =>
+        entry.watchedWithHandles.filter(
+          (handle) => handle !== session.user.handle,
+        ),
+      ),
+    ),
   );
 
   const participantUsers =
@@ -193,43 +259,67 @@ export async function addMovieEntry(
 
   try {
     await db.transaction(async (tx) => {
-      const normalizedTitle = title.toLocaleLowerCase();
-      const existingMovie = await tx.query.movies.findFirst({
-        where: sql`lower(${movies.title}) = ${normalizedTitle}`,
-        columns: {
-          id: true,
-        },
-      });
+      const movieIdByNormalizedTitle = new Map<string, string>();
+      const participantUserByHandle = new Map(
+        participantUsers.map((user) => [user.handle, user]),
+      );
 
-      const movie =
-        existingMovie ??
-        (
-          await tx
-            .insert(movies)
-            .values({
-              title,
-            })
-            .returning({ id: movies.id })
-        )[0];
+      for (const entry of entriesWithStatus) {
+        if (!entry.status) {
+          throw new Error("Unexpected invalid watch status.");
+        }
 
-      const [watchEntry] = await tx
-        .insert(watchEntries)
-        .values({
-          userId: session.user.id,
-          movieId: movie.id,
-          watchedOn,
-          languageWatched,
-          status,
-        })
-        .returning({ id: watchEntries.id });
+        const normalizedTitle = entry.title.toLocaleLowerCase();
+        let movieId = movieIdByNormalizedTitle.get(normalizedTitle);
 
-      if (participantUsers.length > 0) {
-        await tx.insert(watchEntryParticipants).values(
-          participantUsers.map((user) => ({
-            watchEntryId: watchEntry.id,
-            userId: user.id,
-          })),
-        );
+        if (!movieId) {
+          const existingMovie = await tx.query.movies.findFirst({
+            where: sql`lower(${movies.title}) = ${normalizedTitle}`,
+            columns: {
+              id: true,
+            },
+          });
+
+          movieId =
+            existingMovie?.id ??
+            (
+              await tx
+                .insert(movies)
+                .values({
+                  title: entry.title,
+                })
+                .returning({ id: movies.id })
+            )[0].id;
+
+          movieIdByNormalizedTitle.set(normalizedTitle, movieId);
+        }
+
+        const [watchEntry] = await tx
+          .insert(watchEntries)
+          .values({
+            userId: session.user.id,
+            movieId,
+            watchedOn: entry.watchedOn,
+            languageWatched: entry.languageWatched,
+            status: entry.status,
+          })
+          .returning({ id: watchEntries.id });
+
+        const rowParticipantUsers = entry.watchedWithHandles
+          .filter((handle) => handle !== session.user.handle)
+          .map((handle) => participantUserByHandle.get(handle))
+          .filter((user): user is (typeof participantUsers)[number] =>
+            Boolean(user),
+          );
+
+        if (rowParticipantUsers.length > 0) {
+          await tx.insert(watchEntryParticipants).values(
+            rowParticipantUsers.map((user) => ({
+              watchEntryId: watchEntry.id,
+              userId: user.id,
+            })),
+          );
+        }
       }
     });
   } catch (error) {
@@ -246,7 +336,8 @@ export async function addMovieEntry(
 
   return {
     status: "success",
-    message: "Movie entry saved.",
+    message:
+      entries.length === 1 ? "Movie entry saved." : "Movie entries saved.",
   };
 }
 

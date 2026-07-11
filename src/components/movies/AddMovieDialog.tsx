@@ -1,5 +1,6 @@
 "use client";
 
+import { Plus, Trash } from "@phosphor-icons/react";
 import { startTransition, useId, useRef, useState } from "react";
 
 import { addMovieEntry } from "@/app/movies/actions";
@@ -40,28 +41,77 @@ const STATUS_OPTIONS = [
   { value: "dns", label: "DNS" },
 ] as const;
 
+type StatusValue = (typeof STATUS_OPTIONS)[number]["value"];
+type MovieFormRow = {
+  id: string;
+  status: StatusValue;
+  watchedWith: string[];
+};
+
+function createMovieFormRow(
+  id: number,
+  defaultWatchedWith: string[],
+): MovieFormRow {
+  return {
+    id: String(id),
+    status: "watched",
+    watchedWith: defaultWatchedWith,
+  };
+}
+
 export function AddMovieDialog({
   canAdd,
   defaultWatchedWith,
   watchedWithOptions,
 }: AddMovieDialogProps) {
+  const nextRowIdRef = useRef(1);
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [state, setState] = useState<AddMovieActionState>({
     status: "idle",
     message: null,
   });
-  const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]["value"]>("watched");
-  const [watchedWith, setWatchedWith] =
-    useState<string[]>(defaultWatchedWith);
+  const [rows, setRows] = useState<MovieFormRow[]>([
+    createMovieFormRow(0, defaultWatchedWith),
+  ]);
   const [formKey, setFormKey] = useState(0);
   const [comboboxLayerElement, setComboboxLayerElement] =
     useState<HTMLDivElement | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
-  const titleInputId = useId();
-  const watchedOnId = useId();
-  const languageId = useId();
-  const watchedWithId = useId();
+  const fieldIdPrefix = useId();
+
+  function resetRows() {
+    nextRowIdRef.current = 1;
+    setRows([createMovieFormRow(0, defaultWatchedWith)]);
+  }
+
+  function addRow() {
+    setRows((currentRows) => [
+      ...currentRows,
+      createMovieFormRow(nextRowIdRef.current++, defaultWatchedWith),
+    ]);
+  }
+
+  function removeRow(rowId: string) {
+    setRows((currentRows) =>
+      currentRows.length === 1
+        ? currentRows
+        : currentRows.filter((row) => row.id !== rowId),
+    );
+  }
+
+  function updateRow(rowId: string, nextRow: Partial<MovieFormRow>) {
+    setRows((currentRows) =>
+      currentRows.map((row) =>
+        row.id === rowId
+          ? {
+              ...row,
+              ...nextRow,
+            }
+          : row,
+      ),
+    );
+  }
 
   function preventComboboxOutsideDismiss(event: Event) {
     const target = event.target as HTMLElement | null;
@@ -92,8 +142,7 @@ export function AddMovieDialog({
       if (nextState.status === "success") {
         formRef.current?.reset();
         setFormKey((current) => current + 1);
-        setStatus("watched");
-        setWatchedWith(defaultWatchedWith);
+        resetRows();
         setOpen(false);
       }
     });
@@ -107,8 +156,7 @@ export function AddMovieDialog({
         status: "idle",
         message: null,
       });
-      setStatus("watched");
-      setWatchedWith(defaultWatchedWith);
+      resetRows();
     }
   }
 
@@ -121,7 +169,7 @@ export function AddMovieDialog({
       </DialogTrigger>
       <DialogContent
         showCloseButton={false}
-        className="max-w-2xl rounded-none border border-[var(--border)] bg-[var(--background)] p-0 text-[var(--foreground)] shadow-[0_24px_80px_rgba(0,0,0,0.18)]"
+        className="w-[min(96vw,72rem)] max-w-none overflow-hidden rounded-none border border-[var(--border)] bg-[var(--background)] p-0 text-[var(--foreground)] shadow-[0_24px_80px_rgba(0,0,0,0.18)] sm:max-w-none"
         onFocusOutside={preventComboboxOutsideDismiss}
         onInteractOutside={preventComboboxOutsideDismiss}
         onPointerDownOutside={preventComboboxOutsideDismiss}
@@ -134,87 +182,141 @@ export function AddMovieDialog({
           key={formKey}
           ref={formRef}
           onSubmit={handleSubmit}
-          className="grid gap-0"
+          className="grid min-w-0 gap-0"
         >
           <DialogHeader className="border-b border-[var(--border)] px-4 py-3">
             <DialogTitle className="text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--muted-foreground)]">
               Add Movie
             </DialogTitle>
           </DialogHeader>
-          <div className="grid gap-5 px-4 py-4">
-            <div className="grid gap-1.5">
-              <label
-                htmlFor={titleInputId}
-                className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]"
-              >
-                Title
-              </label>
-              <Input id={titleInputId} name="title" required />
+          <div className="grid min-w-0 gap-3 overflow-x-auto px-4 py-4">
+            <div className="hidden grid-cols-[minmax(12rem,1.5fr)_10.5rem_minmax(8rem,0.8fr)_8rem_minmax(13rem,1.2fr)_2.25rem] gap-2 text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--muted-foreground)] lg:grid">
+              <span>Title</span>
+              <span>Date Watched</span>
+              <span>Language</span>
+              <span>Status</span>
+              <span>Watched With</span>
+              <span />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="grid gap-1.5">
-                <label
-                  htmlFor={watchedOnId}
-                  className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]"
-                >
-                  Date Watched
-                </label>
-                <DatePickerField id={watchedOnId} name="watchedOn" />
-              </div>
-              <div className="grid gap-1.5">
-                <label
-                  htmlFor={languageId}
-                  className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]"
-                >
-                  Language
-                </label>
-                <Input
-                  id={languageId}
-                  name="languageWatched"
-                  placeholder="English"
-                />
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]">
-              <div className="grid gap-1.5">
-                <span className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]">
-                  Status
-                </span>
-                <input type="hidden" name="status" value={status} />
-                <Select
-                  value={status}
-                  onValueChange={(value) =>
-                    setStatus(value as (typeof STATUS_OPTIONS)[number]["value"])
-                  }
-                >
-                  <SelectTrigger className="h-9 rounded-none border-[var(--border)] bg-[var(--background)] px-3 shadow-none">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-none border-[var(--border)]">
-                    {STATUS_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid min-w-0 gap-1.5">
-              <label
-                htmlFor={watchedWithId}
-                className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]"
-              >
-                Watched With
-              </label>
-              <WatchedWithCombobox
-                id={watchedWithId}
-                name="watchedWith"
-                options={watchedWithOptions}
-                portalContainer={comboboxLayerElement}
-                value={watchedWith}
-                onValueChange={setWatchedWith}
-              />
+            <div className="grid gap-2">
+              {rows.map((row, index) => {
+                const titleInputId = `${fieldIdPrefix}-title-${row.id}`;
+                const watchedOnId = `${fieldIdPrefix}-watched-on-${row.id}`;
+                const languageId = `${fieldIdPrefix}-language-${row.id}`;
+                const watchedWithId = `${fieldIdPrefix}-watched-with-${row.id}`;
+
+                return (
+                  <div
+                    key={row.id}
+                    className="grid gap-2 border-b border-[var(--border)] pb-3 last:border-b-0 last:pb-0 lg:grid-cols-[minmax(12rem,1.5fr)_10.5rem_minmax(8rem,0.8fr)_8rem_minmax(13rem,1.2fr)_2.25rem] lg:items-start lg:border-b-0 lg:pb-0"
+                  >
+                    <input type="hidden" name="movieRowId" value={row.id} />
+                    <div className="grid gap-1.5">
+                      <label
+                        htmlFor={titleInputId}
+                        className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)] lg:sr-only"
+                      >
+                        Title
+                      </label>
+                      <Input
+                        id={titleInputId}
+                        name={`title:${row.id}`}
+                        required
+                        aria-label={`Row ${index + 1} title`}
+                      />
+                    </div>
+                    <div className="grid gap-1.5">
+                      <label
+                        htmlFor={watchedOnId}
+                        className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)] lg:sr-only"
+                      >
+                        Date Watched
+                      </label>
+                      <DatePickerField
+                        id={watchedOnId}
+                        name={`watchedOn:${row.id}`}
+                        required
+                      />
+                    </div>
+                    <div className="grid gap-1.5">
+                      <label
+                        htmlFor={languageId}
+                        className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)] lg:sr-only"
+                      >
+                        Language
+                      </label>
+                      <Input
+                        id={languageId}
+                        name={`languageWatched:${row.id}`}
+                        placeholder="English"
+                        aria-label={`Row ${index + 1} language`}
+                      />
+                    </div>
+                    <div className="grid gap-1.5">
+                      <span className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)] lg:sr-only">
+                        Status
+                      </span>
+                      <input
+                        type="hidden"
+                        name={`status:${row.id}`}
+                        value={row.status}
+                      />
+                      <Select
+                        value={row.status}
+                        onValueChange={(value) =>
+                          updateRow(row.id, { status: value as StatusValue })
+                        }
+                      >
+                        <SelectTrigger
+                          aria-label={`Row ${index + 1} status`}
+                          className="h-9 rounded-none border-[var(--border)] bg-[var(--background)] px-3 shadow-none"
+                        >
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-none border-[var(--border)]">
+                          {STATUS_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid min-w-0 gap-1.5">
+                      <label
+                        htmlFor={watchedWithId}
+                        className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)] lg:sr-only"
+                      >
+                        Watched With
+                      </label>
+                      <WatchedWithCombobox
+                        id={watchedWithId}
+                        name={`watchedWith:${row.id}`}
+                        options={watchedWithOptions}
+                        portalContainer={comboboxLayerElement}
+                        value={row.watchedWith}
+                        onValueChange={(watchedWith) =>
+                          updateRow(row.id, { watchedWith })
+                        }
+                      />
+                    </div>
+                    <div className="flex justify-end lg:pt-0">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-lg"
+                        className="h-9 w-9 rounded-none"
+                        disabled={rows.length === 1}
+                        aria-label={`Remove row ${index + 1}`}
+                        title="Remove row"
+                        onClick={() => removeRow(row.id)}
+                      >
+                        <Trash className="size-4" weight="regular" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
             {state.status === "error" && state.message ? (
               <p
@@ -224,13 +326,28 @@ export function AddMovieDialog({
               </p>
             ) : null}
           </div>
-          <DialogFooter className="justify-end rounded-none border-t border-[var(--border)] bg-transparent px-4 py-3">
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-              Cancel
+          <DialogFooter className="justify-between rounded-none border-t border-[var(--border)] bg-transparent px-4 py-3 sm:justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-none"
+              onClick={addRow}
+            >
+              <Plus className="size-4" weight="regular" />
+              Add Line
             </Button>
-            <Button type="submit" disabled={pending}>
-              {pending ? "Saving..." : "Confirm"}
-            </Button>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={pending}>
+                {pending ? "Saving..." : "Confirm"}
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 type DatePickerFieldProps = {
   id: string;
   name: string;
+  required?: boolean;
 };
 
 const DATE_FORMATS = ["yyyy-MM-dd", "M/d/yyyy", "M/d/yy"] as const;
@@ -34,7 +35,11 @@ function parseEnteredDate(value: string) {
   return undefined;
 }
 
-export function DatePickerField({ id, name }: DatePickerFieldProps) {
+export function DatePickerField({
+  id,
+  name,
+  required = true,
+}: DatePickerFieldProps) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
   const [month, setMonth] = useState(new Date());
@@ -60,7 +65,7 @@ export function DatePickerField({ id, name }: DatePickerFieldProps) {
             placeholder="YYYY-MM-DD"
             inputMode="numeric"
             autoComplete="off"
-            required
+            required={required}
             aria-invalid={value !== "" && !selectedDate}
             className="rounded-none border-r-0 font-mono tabular-nums"
           />
