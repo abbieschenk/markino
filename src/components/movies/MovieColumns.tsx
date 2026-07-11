@@ -1,9 +1,19 @@
 "use client";
 
-import { ArrowDown, ArrowUp, ArrowsDownUp, Check } from "@phosphor-icons/react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowsClockwise,
+  ArrowsDownUp,
+  Check,
+} from "@phosphor-icons/react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { startTransition, useState } from "react";
+import { toast } from "sonner";
 import type { ColumnDef, FilterFn } from "@tanstack/react-table";
 import type { Column } from "@tanstack/react-table";
+import { resyncMovieMetadata } from "@/app/movies/actions";
 import { Button } from "@/components/ui/button";
 import { DeleteMovieButton } from "@/components/movies/DeleteMovieButton";
 import { SyncMovieMetadataButton } from "@/components/movies/sync-movie-metadata-button";
@@ -231,7 +241,9 @@ function SyncedCell({
   title: string;
 }) {
   if (isSynced) {
-    return (
+    return canSyncMetadata ? (
+      <ResyncMovieMetadataButton movieId={movieId} title={title} />
+    ) : (
       <span
         className="flex justify-center text-[var(--muted-foreground)]"
         title="Synced"
@@ -258,5 +270,65 @@ function SyncedCell({
     <span className="flex justify-center text-[var(--muted-foreground)]">
       -
     </span>
+  );
+}
+
+function ResyncMovieMetadataButton({
+  movieId,
+  title,
+}: {
+  movieId: string;
+  title: string;
+}) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+
+  function handleResync() {
+    setPending(true);
+
+    startTransition(async () => {
+      try {
+        const result = await resyncMovieMetadata(movieId);
+
+        if (result.status === "error") {
+          toast.error(result.message ?? "Unable to resync movie metadata.");
+          return;
+        }
+
+        toast.success("Movie metadata resynced.");
+        router.refresh();
+      } catch (error) {
+        console.error("Failed to resync movie metadata", error);
+        toast.error("Unable to resync movie metadata.");
+      } finally {
+        setPending(false);
+      }
+    });
+  }
+
+  return (
+    <div className="flex justify-center">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        className="text-[var(--muted-foreground)] hover:bg-transparent hover:text-[var(--foreground)]"
+        onClick={handleResync}
+        disabled={pending}
+        aria-label={`Resync TMDB metadata for ${title}`}
+        title={`Resync TMDB metadata for ${title}`}
+      >
+        {pending ? (
+          <ArrowsClockwise
+            aria-hidden="true"
+            className="animate-spin"
+            size={14}
+            weight="regular"
+          />
+        ) : (
+          <Check aria-hidden="true" size={14} weight="regular" />
+        )}
+      </Button>
+    </div>
   );
 }

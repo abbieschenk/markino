@@ -6,7 +6,9 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
+  genres,
   movieCredits,
+  movieGenres,
   movieRankings,
   movieProductionCountries,
   movieSpokenLanguages,
@@ -575,6 +577,7 @@ export async function syncMovieMetadata(
       await tx
         .delete(movieCredits)
         .where(eq(movieCredits.movieId, movieId));
+      await tx.delete(movieGenres).where(eq(movieGenres.movieId, movieId));
       await tx
         .delete(movieProductionCountries)
         .where(eq(movieProductionCountries.movieId, movieId));
@@ -587,10 +590,19 @@ export async function syncMovieMetadata(
         .update(movies)
         .set({
           title: details.title,
+          originalTitle: details.originalTitle,
+          overview: details.overview,
           releaseYear: details.releaseYear,
+          releaseDate: details.releaseDate,
+          runtimeMinutes: details.runtimeMinutes,
           originalLanguage: details.originalLanguage,
+          originCountries: details.originCountries,
           tmdbId: details.id,
+          imdbId: details.imdbId,
+          posterPath: details.posterPath,
           tagline: details.tagline,
+          budget: details.budget,
+          revenue: details.revenue,
           director: creditSummaries.director,
           writer: creditSummaries.writer,
           editor: creditSummaries.editor,
@@ -598,6 +610,37 @@ export async function syncMovieMetadata(
           updatedAt: new Date(),
         })
         .where(eq(movies.id, movieId));
+
+      if (details.genres.length > 0) {
+        const syncedGenres = await tx
+          .insert(genres)
+          .values(details.genres)
+          .onConflictDoUpdate({
+            target: genres.tmdbGenreId,
+            set: {
+              name: sql`excluded.name`,
+            },
+          })
+          .returning({
+            id: genres.id,
+            tmdbGenreId: genres.tmdbGenreId,
+          });
+        const genreIdsByTmdbId = new Map(
+          syncedGenres.map((genre) => [genre.tmdbGenreId, genre.id]),
+        );
+
+        await tx.insert(movieGenres).values(
+          details.genres
+            .map((genre) => {
+              const genreId = genreIdsByTmdbId.get(genre.tmdbGenreId);
+
+              return genreId ? { movieId, genreId } : null;
+            })
+            .filter((genre): genre is { movieId: string; genreId: string } =>
+              Boolean(genre),
+            ),
+        );
+      }
 
       if (details.productionCountries.length > 0) {
         await tx
@@ -773,4 +816,40 @@ export async function syncMovieMetadata(
     status: "success",
     message: "Movie metadata synced.",
   };
+}
+
+export async function resyncMovieMetadata(
+  movieId: string,
+): Promise<MovieActionResult> {
+  const authorized = await requireSuperadmin();
+
+  if (authorized.status === "error") {
+    return {
+      status: "error",
+      message: authorized.message,
+    };
+  }
+
+  const movie = await db.query.movies.findFirst({
+    where: eq(movies.id, movieId),
+    columns: {
+      tmdbId: true,
+    },
+  });
+
+  if (!movie) {
+    return {
+      status: "error",
+      message: "Movie could not be found.",
+    };
+  }
+
+  if (!movie.tmdbId) {
+    return {
+      status: "error",
+      message: "Movie metadata has not been synced yet.",
+    };
+  }
+
+  return syncMovieMetadata(movieId, movie.tmdbId);
 }

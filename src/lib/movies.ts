@@ -27,13 +27,23 @@ export type MovieLedgerEntry = {
 
 export type MovieDetail = MovieLedgerEntry & {
   releaseYear: number | null;
+  releaseDate: string | null;
+  runtimeMinutes: number | null;
+  originalTitle: string | null;
+  overview: string | null;
   originalLanguage: string | null;
+  originCountries: string[];
   tmdbId: number | null;
+  imdbId: string | null;
+  posterPath: string | null;
   tagline: string | null;
+  budget: number | null;
+  revenue: number | null;
   director: string | null;
   writer: string | null;
   editor: string | null;
   metadataSyncedAt: Date | null;
+  genres: string[];
   productionCountries: string[];
   spokenLanguages: string[];
   studios: string[];
@@ -251,6 +261,11 @@ export async function getMovieByIdForUser(movieId: string, userId: string) {
   const movie = await db.query.movies.findFirst({
     where: eq(movies.id, movieId),
     with: {
+      genres: {
+        with: {
+          genre: true,
+        },
+      },
       productionCountries: {
         with: {
           country: true,
@@ -281,13 +296,25 @@ export async function getMovieByIdForUser(movieId: string, userId: string) {
   return {
     ...entry,
     releaseYear: movie.releaseYear,
+    releaseDate: movie.releaseDate,
+    runtimeMinutes: movie.runtimeMinutes,
+    originalTitle: movie.originalTitle,
+    overview: movie.overview,
     originalLanguage: movie.originalLanguage,
+    originCountries: movie.originCountries ?? [],
     tmdbId: movie.tmdbId,
+    imdbId: movie.imdbId,
+    posterPath: movie.posterPath,
     tagline: movie.tagline,
+    budget: movie.budget,
+    revenue: movie.revenue,
     director: movie.director,
     writer: movie.writer,
     editor: movie.editor,
     metadataSyncedAt: movie.metadataSyncedAt,
+    genres: movie.genres
+      .map((genre) => genre.genre.name)
+      .sort((left, right) => left.localeCompare(right, "en")),
     productionCountries: movie.productionCountries
       .map((country) => country.country.name)
       .sort((left, right) => left.localeCompare(right, "en")),

@@ -1,9 +1,11 @@
 import { relations, sql } from "drizzle-orm";
 import {
+  bigint,
   boolean,
   date,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -135,10 +137,19 @@ export const movies = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     title: text("title").notNull(),
+    originalTitle: text("original_title"),
+    overview: text("overview"),
     releaseYear: integer("release_year"),
+    releaseDate: date("release_date", { mode: "string" }),
+    runtimeMinutes: integer("runtime_minutes"),
     originalLanguage: varchar("original_language", { length: 32 }),
+    originCountries: jsonb("origin_countries").$type<string[]>(),
     tmdbId: integer("tmdb_id"),
+    imdbId: varchar("imdb_id", { length: 32 }),
+    posterPath: text("poster_path"),
     tagline: text("tagline"),
+    budget: bigint("budget", { mode: "number" }),
+    revenue: bigint("revenue", { mode: "number" }),
     director: text("director"),
     writer: text("writer"),
     editor: text("editor"),
@@ -153,6 +164,38 @@ export const movies = pgTable(
   (table) => [
     uniqueIndex("movies_tmdb_id_unique").on(table.tmdbId),
     index("movies_title_idx").on(table.title),
+  ],
+);
+
+export const genres = pgTable(
+  "genres",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tmdbGenreId: integer("tmdb_genre_id").notNull(),
+    name: text("name").notNull(),
+  },
+  (table) => [
+    uniqueIndex("genres_tmdb_genre_id_unique").on(table.tmdbGenreId),
+  ],
+);
+
+export const movieGenres = pgTable(
+  "movie_genres",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    movieId: uuid("movie_id")
+      .notNull()
+      .references(() => movies.id, { onDelete: "cascade" }),
+    genreId: uuid("genre_id")
+      .notNull()
+      .references(() => genres.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("movie_genres_movie_genre_unique").on(
+      table.movieId,
+      table.genreId,
+    ),
+    index("movie_genres_genre_id_idx").on(table.genreId),
   ],
 );
 
@@ -406,10 +449,26 @@ export const usersRelations = relations(users, ({ many }) => ({
 export const moviesRelations = relations(movies, ({ many }) => ({
   watchEntries: many(watchEntries),
   movieRankings: many(movieRankings),
+  genres: many(movieGenres),
   productionCountries: many(movieProductionCountries),
   spokenLanguages: many(movieSpokenLanguages),
   studios: many(movieStudios),
   credits: many(movieCredits),
+}));
+
+export const genresRelations = relations(genres, ({ many }) => ({
+  movies: many(movieGenres),
+}));
+
+export const movieGenresRelations = relations(movieGenres, ({ one }) => ({
+  movie: one(movies, {
+    fields: [movieGenres.movieId],
+    references: [movies.id],
+  }),
+  genre: one(genres, {
+    fields: [movieGenres.genreId],
+    references: [genres.id],
+  }),
 }));
 
 export const productionCountriesRelations = relations(

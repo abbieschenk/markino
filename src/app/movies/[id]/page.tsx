@@ -26,6 +26,33 @@ function formatSyncedAt(value: Date | null) {
   }).format(value);
 }
 
+function formatRuntime(minutes: number | null) {
+  if (!minutes) {
+    return "-";
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  return hours > 0 ? `${hours}h ${remainingMinutes}m` : `${remainingMinutes}m`;
+}
+
+function formatMoney(value: number | null) {
+  if (!value) {
+    return "-";
+  }
+
+  return new Intl.NumberFormat("en", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function getTmdbPosterUrl(posterPath: string | null) {
+  return posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : null;
+}
+
 export async function generateMetadata({
   params,
 }: MovieDetailPageProps): Promise<Metadata> {
@@ -63,6 +90,7 @@ export default async function MovieDetailPage({
     Boolean(movie.writer) ||
     Boolean(movie.editor) ||
     movie.cast.length > 0;
+  const posterUrl = getTmdbPosterUrl(movie.posterPath);
 
   return (
     <section className="space-y-6">
@@ -133,23 +161,83 @@ export default async function MovieDetailPage({
               </div>
               <div className="grid grid-cols-[9rem_1fr] border-b border-[var(--border)] px-4 py-3">
                 <dt className="text-[var(--muted-foreground)]">Release</dt>
-                <dd>{movie.releaseYear ?? "-"}</dd>
+                <dd>{movie.releaseDate ?? movie.releaseYear ?? "-"}</dd>
               </div>
-              <div className="grid grid-cols-[9rem_1fr] border-b border-[var(--border)] px-4 py-3 sm:border-r sm:border-b-0">
+              <div className="grid grid-cols-[9rem_1fr] border-b border-[var(--border)] px-4 py-3 sm:border-r">
+                <dt className="text-[var(--muted-foreground)]">Runtime</dt>
+                <dd>{formatRuntime(movie.runtimeMinutes)}</dd>
+              </div>
+              <div className="grid grid-cols-[9rem_1fr] border-b border-[var(--border)] px-4 py-3">
+                <dt className="text-[var(--muted-foreground)]">
+                  Original Title
+                </dt>
+                <dd>{movie.originalTitle ?? "-"}</dd>
+              </div>
+              <div className="grid grid-cols-[9rem_1fr] border-b border-[var(--border)] px-4 py-3 sm:border-r">
                 <dt className="text-[var(--muted-foreground)]">Original Lang</dt>
                 <dd>{movie.originalLanguage ?? "-"}</dd>
               </div>
-              <div className="grid grid-cols-[9rem_1fr] px-4 py-3">
+              <div className="grid grid-cols-[9rem_1fr] border-b border-[var(--border)] px-4 py-3">
+                <dt className="text-[var(--muted-foreground)]">IMDb ID</dt>
+                <dd>
+                  {movie.imdbId ? (
+                    <a
+                      href={`https://www.imdb.com/title/${movie.imdbId}/`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="hover:underline"
+                    >
+                      {movie.imdbId}
+                    </a>
+                  ) : (
+                    "-"
+                  )}
+                </dd>
+              </div>
+              <div className="grid grid-cols-[9rem_1fr] border-b border-[var(--border)] px-4 py-3 sm:border-r">
+                <dt className="text-[var(--muted-foreground)]">Poster</dt>
+                <dd>
+                  {posterUrl ? (
+                    <a
+                      href={posterUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="hover:underline"
+                    >
+                      View image
+                    </a>
+                  ) : (
+                    "-"
+                  )}
+                </dd>
+              </div>
+              <div className="grid grid-cols-[9rem_1fr] border-b border-[var(--border)] px-4 py-3">
                 <dt className="text-[var(--muted-foreground)]">Synced</dt>
                 <dd>{formatSyncedAt(movie.metadataSyncedAt)}</dd>
               </div>
             </dl>
           </section>
+          {movie.overview ? (
+            <section className="border border-[var(--border)]">
+              <div className="border-b border-[var(--border)] px-4 py-3 text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--muted-foreground)]">
+                Overview
+              </div>
+              <p className="px-4 py-3 text-sm leading-6">{movie.overview}</p>
+            </section>
+          ) : null}
           <section className="border border-[var(--border)]">
             <div className="border-b border-[var(--border)] px-4 py-3 text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--muted-foreground)]">
               Production
             </div>
             <dl className="grid text-sm">
+              <div className="grid grid-cols-[9rem_1fr] border-b border-[var(--border)] px-4 py-3">
+                <dt className="text-[var(--muted-foreground)]">Genres</dt>
+                <dd>{joinValues(movie.genres)}</dd>
+              </div>
+              <div className="grid grid-cols-[9rem_1fr] border-b border-[var(--border)] px-4 py-3">
+                <dt className="text-[var(--muted-foreground)]">Origin</dt>
+                <dd>{joinValues(movie.originCountries)}</dd>
+              </div>
               <div className="grid grid-cols-[9rem_1fr] border-b border-[var(--border)] px-4 py-3">
                 <dt className="text-[var(--muted-foreground)]">Countries</dt>
                 <dd>{joinValues(movie.productionCountries)}</dd>
@@ -161,6 +249,21 @@ export default async function MovieDetailPage({
               <div className="grid grid-cols-[9rem_1fr] px-4 py-3">
                 <dt className="text-[var(--muted-foreground)]">Studios</dt>
                 <dd>{joinValues(movie.studios)}</dd>
+              </div>
+            </dl>
+          </section>
+          <section className="border border-[var(--border)]">
+            <div className="border-b border-[var(--border)] px-4 py-3 text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--muted-foreground)]">
+              Financials
+            </div>
+            <dl className="grid text-sm sm:grid-cols-2">
+              <div className="grid grid-cols-[9rem_1fr] border-b border-[var(--border)] px-4 py-3 sm:border-r sm:border-b-0">
+                <dt className="text-[var(--muted-foreground)]">Budget</dt>
+                <dd>{formatMoney(movie.budget)}</dd>
+              </div>
+              <div className="grid grid-cols-[9rem_1fr] px-4 py-3">
+                <dt className="text-[var(--muted-foreground)]">Revenue</dt>
+                <dd>{formatMoney(movie.revenue)}</dd>
               </div>
             </dl>
           </section>

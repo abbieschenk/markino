@@ -16,10 +16,21 @@ export type TmdbMovieDetails = {
   id: number;
   title: string;
   originalTitle: string;
+  overview: string | null;
   releaseDate: string | null;
   releaseYear: number | null;
+  runtimeMinutes: number | null;
   originalLanguage: string | null;
+  originCountries: string[];
+  imdbId: string | null;
+  posterPath: string | null;
   tagline: string | null;
+  budget: number | null;
+  revenue: number | null;
+  genres: {
+    tmdbGenreId: number;
+    name: string;
+  }[];
   productionCountries: {
     isoCode: string;
     name: string;
@@ -68,9 +79,20 @@ type TmdbDetailsResponse = {
   id?: number;
   title?: string;
   original_title?: string;
+  overview?: string;
   release_date?: string;
+  runtime?: number;
   original_language?: string;
+  origin_country?: string[];
+  imdb_id?: string;
+  poster_path?: string;
   tagline?: string;
+  budget?: number;
+  revenue?: number;
+  genres?: {
+    id?: number;
+    name?: string;
+  }[];
   production_countries?: {
     iso_3166_1?: string;
     name?: string;
@@ -136,6 +158,12 @@ function getReleaseYear(releaseDate: string | null) {
 function textOrNull(value: string | undefined) {
   const normalized = value?.trim();
   return normalized ? normalized : null;
+}
+
+function positiveIntegerOrNull(value: number | undefined) {
+  return typeof value === "number" && Number.isInteger(value) && value > 0
+    ? value
+    : null;
 }
 
 async function tmdbFetch<T>(path: string, params?: URLSearchParams): Promise<T> {
@@ -226,10 +254,29 @@ export async function getTmdbMovieDetails(
     id: data.id,
     title: data.title,
     originalTitle: data.original_title ?? data.title,
+    overview: textOrNull(data.overview),
     releaseDate,
     releaseYear: getReleaseYear(releaseDate),
+    runtimeMinutes: positiveIntegerOrNull(data.runtime),
     originalLanguage: textOrNull(data.original_language),
+    originCountries: Array.from(
+      new Set(
+        (data.origin_country ?? [])
+          .map((country) => country.trim().toUpperCase())
+          .filter(Boolean),
+      ),
+    ),
+    imdbId: textOrNull(data.imdb_id),
+    posterPath: textOrNull(data.poster_path),
     tagline: textOrNull(data.tagline),
+    budget: positiveIntegerOrNull(data.budget),
+    revenue: positiveIntegerOrNull(data.revenue),
+    genres: (data.genres ?? [])
+      .filter((genre) => typeof genre.id === "number" && genre.name)
+      .map((genre) => ({
+        tmdbGenreId: genre.id!,
+        name: genre.name!,
+      })),
     productionCountries: (data.production_countries ?? [])
       .filter((country) => country.iso_3166_1 && country.name)
       .map((country) => ({
