@@ -32,6 +32,7 @@ export type MovieChartStats = {
 type MovieTooltipEntry = {
   movieId: string;
   title: string;
+  watchedOn?: string;
 };
 
 function getMonthIndex(month: string) {
@@ -94,6 +95,27 @@ function sortMoviesByRanking(
 
       if (leftRank !== rightRank) {
         return leftRank - rightRank;
+      }
+
+      const titleSort = left.title.localeCompare(right.title, "en");
+
+      if (titleSort !== 0) {
+        return titleSort;
+      }
+
+      return left.movieId.localeCompare(right.movieId, "en");
+    })
+    .map((movie) => movie.title);
+}
+
+function sortMoviesByWatchedOn(movies: Iterable<MovieTooltipEntry>) {
+  return Array.from(movies)
+    .sort((left, right) => {
+      const leftWatchedOn = left.watchedOn ?? "";
+      const rightWatchedOn = right.watchedOn ?? "";
+
+      if (leftWatchedOn !== rightWatchedOn) {
+        return leftWatchedOn.localeCompare(rightWatchedOn);
       }
 
       const titleSort = left.title.localeCompare(right.title, "en");
@@ -288,6 +310,7 @@ export async function getMovieChartStatsForUser(
       monthMovies.push({
         movieId: entry.movieId,
         title: entry.movie.title,
+        watchedOn: entry.watchedOn,
       });
     }
 
@@ -313,10 +336,7 @@ export async function getMovieChartStatsForUser(
 
   return {
     monthlyWatched: monthlyWatched.map((month) => {
-      const movies = sortMoviesByRanking(
-        moviesByMonth.get(month.month) ?? [],
-        rankByMovieId,
-      );
+      const movies = sortMoviesByWatchedOn(moviesByMonth.get(month.month) ?? []);
 
       return {
         ...month,

@@ -29,10 +29,6 @@ export default async function ChartsPage() {
       <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--border)] pb-3">
         <div>
           <h1 className="text-base font-medium">Charts</h1>
-          <p className="text-sm text-[var(--muted-foreground)]">
-            Watch pace, release years, and repeated collaborators from your
-            visible ledger.
-          </p>
         </div>
       </div>
 
@@ -41,7 +37,7 @@ export default async function ChartsPage() {
           <WatchedOverTimeChart data={stats.monthlyWatched} />
         </ChartPanel>
 
-        <ChartPanel title="Release Years" eyebrow="Synced metadata">
+        <ChartPanel title="Release Years">
           <ReleaseYearChart data={stats.releaseYears} />
         </ChartPanel>
 
