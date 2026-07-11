@@ -1,53 +1,96 @@
 "use client";
 
 import { CalendarBlank } from "@phosphor-icons/react";
-import { format, parse } from "date-fns";
+import { format, isValid, parse } from "date-fns";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 
 type DatePickerFieldProps = {
   id: string;
   name: string;
 };
 
-function parseStoredDate(value: string) {
-  const parsed = parse(value, "yyyy-MM-dd", new Date());
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+const DATE_FORMATS = ["yyyy-MM-dd", "M/d/yyyy", "M/d/yy"] as const;
+
+function parseEnteredDate(value: string) {
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    return undefined;
+  }
+
+  for (const dateFormat of DATE_FORMATS) {
+    const parsed = parse(trimmedValue, dateFormat, new Date());
+
+    if (isValid(parsed) && format(parsed, dateFormat) === trimmedValue) {
+      return parsed;
+    }
+  }
+
+  return undefined;
 }
 
 export function DatePickerField({ id, name }: DatePickerFieldProps) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
-  const selectedDate = useMemo(() => parseStoredDate(value), [value]);
+  const [month, setMonth] = useState(new Date());
+  const selectedDate = useMemo(() => parseEnteredDate(value), [value]);
+
+  function handleInputBlur() {
+    if (selectedDate) {
+      setValue(format(selectedDate, "yyyy-MM-dd"));
+      setMonth(selectedDate);
+    }
+  }
 
   return (
     <div className="grid gap-1.5">
-      <input type="hidden" name={name} value={value} />
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
+        <div className="flex">
+          <Input
             id={id}
-            type="button"
-            variant="outline"
-            className={cn(
-              "h-9 justify-start rounded-none border-[var(--border)] bg-[var(--background)] px-3 text-left text-sm font-normal shadow-none hover:bg-[var(--background)]",
-              !selectedDate && "text-[var(--muted-foreground)]",
-            )}
-          >
-            <CalendarBlank className="size-4" weight="regular" />
-            {selectedDate ? format(selectedDate, "PPP") : "Select date"}
-          </Button>
-        </PopoverTrigger>
+            name={name}
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            onBlur={handleInputBlur}
+            placeholder="YYYY-MM-DD"
+            inputMode="numeric"
+            autoComplete="off"
+            required
+            aria-invalid={value !== "" && !selectedDate}
+            className="rounded-none border-r-0 font-mono tabular-nums"
+          />
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              aria-label="Choose date"
+              className="h-9 w-9 rounded-none border-[var(--border)] bg-[var(--background)] p-0 shadow-none hover:bg-[var(--muted)]"
+              onClick={() => {
+                if (selectedDate) {
+                  setMonth(selectedDate);
+                }
+              }}
+            >
+              <CalendarBlank className="size-4" weight="regular" />
+            </Button>
+          </PopoverTrigger>
+        </div>
         <PopoverContent align="start" className="w-auto">
           <Calendar
             mode="single"
             selected={selectedDate}
+            month={month}
+            onMonthChange={setMonth}
             onSelect={(date) => {
               setValue(date ? format(date, "yyyy-MM-dd") : "");
+              if (date) {
+                setMonth(date);
+              }
               if (date) {
                 setOpen(false);
               }

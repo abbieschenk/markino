@@ -24,6 +24,7 @@ export type LabelCount = {
 
 export type MovieChartStats = {
   monthlyWatched: MonthlyWatchedCount[];
+  releaseYears: LabelCount[];
   topDirectors: LabelCount[];
   topActors: LabelCount[];
 };
@@ -250,6 +251,7 @@ export async function getMovieChartStatsForUser(
   const moviesByMonth = new Map<string, MovieTooltipEntry[]>(
     monthlyWatched.map((month) => [month.month, []]),
   );
+  const movieIdsByReleaseYear = new Map<string, Set<string>>();
 
   for (const entry of visibleEntries) {
     const month = entry.watchedOn.slice(0, 7);
@@ -260,6 +262,14 @@ export async function getMovieChartStatsForUser(
         movieId: entry.movieId,
         title: entry.movie.title,
       });
+    }
+
+    if (entry.movie.releaseYear != null) {
+      addMovieForLabel(
+        movieIdsByReleaseYear,
+        String(entry.movie.releaseYear),
+        entry.movieId,
+      );
     }
   }
 
@@ -287,6 +297,22 @@ export async function getMovieChartStatsForUser(
         movies,
       };
     }),
+    releaseYears: Array.from(movieIdsByReleaseYear.entries())
+      .map(([label, movieIds]) => ({
+        label,
+        count: movieIds.size,
+        movies: sortMoviesByRanking(
+          Array.from(movieIds)
+            .map((movieId) => {
+              const title = movieTitleById.get(movieId);
+
+              return title ? { movieId, title } : null;
+            })
+            .filter((movie): movie is MovieTooltipEntry => movie != null),
+          rankByMovieId,
+        ),
+      }))
+      .sort((left, right) => Number(left.label) - Number(right.label)),
     topDirectors,
     topActors,
   };

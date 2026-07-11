@@ -338,6 +338,31 @@ export const watchEntryParticipants = pgTable(
   ],
 );
 
+export const userDefaultWatchParticipants = pgTable(
+  "user_default_watch_participants",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    participantUserId: uuid("participant_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("user_default_watch_participants_user_participant_unique").on(
+      table.userId,
+      table.participantUserId,
+    ),
+    index("user_default_watch_participants_participant_user_id_idx").on(
+      table.participantUserId,
+    ),
+  ],
+);
+
 export const movieRankings = pgTable(
   "movie_rankings",
   {
@@ -369,6 +394,12 @@ export const movieRankings = pgTable(
 export const usersRelations = relations(users, ({ many }) => ({
   watchEntries: many(watchEntries),
   watchEntryParticipants: many(watchEntryParticipants),
+  defaultWatchParticipants: many(userDefaultWatchParticipants, {
+    relationName: "defaultWatchParticipantOwner",
+  }),
+  defaultWatchParticipantFor: many(userDefaultWatchParticipants, {
+    relationName: "defaultWatchParticipantUser",
+  }),
   movieRankings: many(movieRankings),
 }));
 
@@ -475,6 +506,22 @@ export const watchEntryParticipantsRelations = relations(
     user: one(users, {
       fields: [watchEntryParticipants.userId],
       references: [users.id],
+    }),
+  }),
+);
+
+export const userDefaultWatchParticipantsRelations = relations(
+  userDefaultWatchParticipants,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [userDefaultWatchParticipants.userId],
+      references: [users.id],
+      relationName: "defaultWatchParticipantOwner",
+    }),
+    participantUser: one(users, {
+      fields: [userDefaultWatchParticipants.participantUserId],
+      references: [users.id],
+      relationName: "defaultWatchParticipantUser",
     }),
   }),
 );

@@ -25,6 +25,7 @@ import {
 
 type AddMovieDialogProps = {
   canAdd: boolean;
+  defaultWatchedWith: string[];
   watchedWithOptions: string[];
 };
 
@@ -41,6 +42,7 @@ const STATUS_OPTIONS = [
 
 export function AddMovieDialog({
   canAdd,
+  defaultWatchedWith,
   watchedWithOptions,
 }: AddMovieDialogProps) {
   const [open, setOpen] = useState(false);
@@ -50,7 +52,8 @@ export function AddMovieDialog({
     message: null,
   });
   const [status, setStatus] = useState<(typeof STATUS_OPTIONS)[number]["value"]>("watched");
-  const [watchedWith, setWatchedWith] = useState<string[]>([]);
+  const [watchedWith, setWatchedWith] =
+    useState<string[]>(defaultWatchedWith);
   const [formKey, setFormKey] = useState(0);
   const [comboboxLayerElement, setComboboxLayerElement] =
     useState<HTMLDivElement | null>(null);
@@ -90,14 +93,27 @@ export function AddMovieDialog({
         formRef.current?.reset();
         setFormKey((current) => current + 1);
         setStatus("watched");
-        setWatchedWith([]);
+        setWatchedWith(defaultWatchedWith);
         setOpen(false);
       }
     });
   }
 
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen);
+
+    if (nextOpen) {
+      setState({
+        status: "idle",
+        message: null,
+      });
+      setStatus("watched");
+      setWatchedWith(defaultWatchedWith);
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button type="button" size="lg" disabled={!canAdd}>
           Add

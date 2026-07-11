@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { ChartPanel } from "@/components/charts/chart-panel";
+import { ReleaseYearChart } from "@/components/charts/release-year-chart";
 import { TopPeopleChart } from "@/components/charts/top-people-chart";
 import { WatchedOverTimeChart } from "@/components/charts/watched-over-time-chart";
 import { auth } from "@/lib/auth";
@@ -29,7 +30,8 @@ export default async function ChartsPage() {
         <div>
           <h1 className="text-base font-medium">Charts</h1>
           <p className="text-sm text-[var(--muted-foreground)]">
-            Watch pace and repeated collaborators from your visible ledger.
+            Watch pace, release years, and repeated collaborators from your
+            visible ledger.
           </p>
         </div>
       </div>
@@ -37,6 +39,10 @@ export default async function ChartsPage() {
       <div className="grid gap-4 xl:grid-cols-2">
         <ChartPanel title="Watched Over Time" eyebrow="Last 12 months">
           <WatchedOverTimeChart data={stats.monthlyWatched} />
+        </ChartPanel>
+
+        <ChartPanel title="Release Years" eyebrow="Synced metadata">
+          <ReleaseYearChart data={stats.releaseYears} />
         </ChartPanel>
 
         <ChartPanel title="Top Directors" eyebrow="Top 10">
