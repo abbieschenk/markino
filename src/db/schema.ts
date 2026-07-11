@@ -6,7 +6,6 @@ import {
   integer,
   pgEnum,
   pgTable,
-  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -157,14 +156,22 @@ export const movies = pgTable(
   ],
 );
 
-export const productionCountries = pgTable("production_countries", {
-  isoCode: varchar("iso_code", { length: 8 }).primaryKey(),
-  name: text("name").notNull(),
-});
+export const productionCountries = pgTable(
+  "production_countries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    isoCode: varchar("iso_code", { length: 8 }).notNull(),
+    name: text("name").notNull(),
+  },
+  (table) => [
+    uniqueIndex("production_countries_iso_code_unique").on(table.isoCode),
+  ],
+);
 
 export const movieProductionCountries = pgTable(
   "movie_production_countries",
   {
+    id: uuid("id").defaultRandom().primaryKey(),
     movieId: uuid("movie_id")
       .notNull()
       .references(() => movies.id, { onDelete: "cascade" }),
@@ -173,22 +180,30 @@ export const movieProductionCountries = pgTable(
       .references(() => productionCountries.isoCode, { onDelete: "cascade" }),
   },
   (table) => [
-    primaryKey({
-      columns: [table.movieId, table.countryCode],
-      name: "movie_production_countries_pk",
-    }),
+    uniqueIndex("movie_production_countries_movie_country_unique").on(
+      table.movieId,
+      table.countryCode,
+    ),
     index("movie_production_countries_country_code_idx").on(table.countryCode),
   ],
 );
 
-export const spokenLanguages = pgTable("spoken_languages", {
-  isoCode: varchar("iso_code", { length: 16 }).primaryKey(),
-  name: text("name").notNull(),
-});
+export const spokenLanguages = pgTable(
+  "spoken_languages",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    isoCode: varchar("iso_code", { length: 16 }).notNull(),
+    name: text("name").notNull(),
+  },
+  (table) => [
+    uniqueIndex("spoken_languages_iso_code_unique").on(table.isoCode),
+  ],
+);
 
 export const movieSpokenLanguages = pgTable(
   "movie_spoken_languages",
   {
+    id: uuid("id").defaultRandom().primaryKey(),
     movieId: uuid("movie_id")
       .notNull()
       .references(() => movies.id, { onDelete: "cascade" }),
@@ -197,10 +212,10 @@ export const movieSpokenLanguages = pgTable(
       .references(() => spokenLanguages.isoCode, { onDelete: "cascade" }),
   },
   (table) => [
-    primaryKey({
-      columns: [table.movieId, table.languageCode],
-      name: "movie_spoken_languages_pk",
-    }),
+    uniqueIndex("movie_spoken_languages_movie_language_unique").on(
+      table.movieId,
+      table.languageCode,
+    ),
     index("movie_spoken_languages_language_code_idx").on(table.languageCode),
   ],
 );
@@ -221,6 +236,7 @@ export const studios = pgTable(
 export const movieStudios = pgTable(
   "movie_studios",
   {
+    id: uuid("id").defaultRandom().primaryKey(),
     movieId: uuid("movie_id")
       .notNull()
       .references(() => movies.id, { onDelete: "cascade" }),
@@ -229,10 +245,10 @@ export const movieStudios = pgTable(
       .references(() => studios.id, { onDelete: "cascade" }),
   },
   (table) => [
-    primaryKey({
-      columns: [table.movieId, table.studioId],
-      name: "movie_studios_pk",
-    }),
+    uniqueIndex("movie_studios_movie_studio_unique").on(
+      table.movieId,
+      table.studioId,
+    ),
     index("movie_studios_studio_id_idx").on(table.studioId),
   ],
 );
@@ -302,6 +318,7 @@ export const watchEntries = pgTable(
 export const watchEntryParticipants = pgTable(
   "watch_entry_participants",
   {
+    id: uuid("id").defaultRandom().primaryKey(),
     watchEntryId: uuid("watch_entry_id")
       .notNull()
       .references(() => watchEntries.id, { onDelete: "cascade" }),
@@ -313,10 +330,10 @@ export const watchEntryParticipants = pgTable(
       .notNull(),
   },
   (table) => [
-    primaryKey({
-      columns: [table.watchEntryId, table.userId],
-      name: "watch_entry_participants_pk",
-    }),
+    uniqueIndex("watch_entry_participants_entry_user_unique").on(
+      table.watchEntryId,
+      table.userId,
+    ),
     index("watch_entry_participants_user_id_idx").on(table.userId),
   ],
 );
