@@ -160,7 +160,7 @@ function selectLedgerEntriesByMovie(entries: HydratedWatchEntry[]) {
   return Array.from(entriesByMovieId.values());
 }
 
-async function getVisibleWatchEntriesForUser(userId: string) {
+export async function getVisibleWatchEntriesForUser(userId: string) {
   const ownedEntries = await getOwnedWatchEntries(userId);
   const participantLinks = await getParticipantWatchEntries(userId);
 

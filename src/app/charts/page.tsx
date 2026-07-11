@@ -1,0 +1,58 @@
+import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+
+import { ChartPanel } from "@/components/charts/chart-panel";
+import { TopPeopleChart } from "@/components/charts/top-people-chart";
+import { WatchedOverTimeChart } from "@/components/charts/watched-over-time-chart";
+import { auth } from "@/lib/auth";
+import { getMovieChartStatsForUser } from "@/lib/movie-chart-stats";
+
+export const metadata: Metadata = {
+  title: "Charts",
+};
+
+export default async function ChartsPage() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session?.user?.id) {
+    redirect("/sign-in");
+  }
+
+  const stats = await getMovieChartStatsForUser(session.user.id);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--border)] pb-3">
+        <div>
+          <h1 className="text-base font-medium">Charts</h1>
+          <p className="text-sm text-[var(--muted-foreground)]">
+            Watch pace and repeated collaborators from your visible ledger.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <ChartPanel title="Watched Over Time" eyebrow="Last 12 months">
+          <WatchedOverTimeChart data={stats.monthlyWatched} />
+        </ChartPanel>
+
+        <ChartPanel title="Top Directors" eyebrow="Top 10">
+          <TopPeopleChart
+            data={stats.topDirectors}
+            emptyLabel="No director metadata synced yet."
+          />
+        </ChartPanel>
+
+        <ChartPanel title="Top Actors" eyebrow="Top-billed cast, top 10">
+          <TopPeopleChart
+            data={stats.topActors}
+            emptyLabel="No cast metadata synced yet."
+          />
+        </ChartPanel>
+      </div>
+    </div>
+  );
+}

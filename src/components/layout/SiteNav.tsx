@@ -9,7 +9,10 @@ const loggedOutLinks = [
   { href: "/", label: "Overview" },
 ] as const;
 
-const loggedInLinks = [{ href: "/", label: "Movies" }] as const;
+const loggedInLinks = [
+  { href: "/movies", label: "Movies" },
+  { href: "/charts", label: "Charts" },
+] as const;
 
 export async function SiteNav() {
   const session = await auth.api.getSession({

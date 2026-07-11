@@ -319,7 +319,11 @@ export function MovieDataTable({
           <div className="text-xs text-muted-foreground">
             {table.getFilteredRowModel().rows.length} of {tableData.length} movies
           </div>
-          {toolbarActions}
+          {toolbarActions ? (
+            <div key="toolbar-actions" className="flex items-center">
+              {toolbarActions}
+            </div>
+          ) : null}
         </div>
       </div>
       <Table>

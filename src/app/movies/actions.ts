@@ -495,6 +495,7 @@ export async function syncMovieMetadata(
       await tx
         .update(movies)
         .set({
+          title: details.title,
           releaseYear: details.releaseYear,
           originalLanguage: details.originalLanguage,
           tmdbId: details.id,
