@@ -97,12 +97,19 @@ export const watchStatusEnum = pgEnum("watch_status", [
   "dns",
 ]);
 
+export const userRoleEnum = pgEnum("user_role", [
+  "user",
+  "admin",
+  "superadmin",
+]);
+
 export const users = pgTable(
   "users",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     handle: varchar("handle", { length: 32 }).notNull(),
     displayName: varchar("display_name", { length: 128 }).notNull(),
+    role: userRoleEnum("role").default("user").notNull(),
     email: text("email").notNull(),
     emailVerified: boolean("email_verified").default(false).notNull(),
     image: text("image"),

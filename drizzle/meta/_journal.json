@@ -22,6 +22,13 @@
       "when": 1778758640501,
       "tag": "0002_fearless_doctor_octopus",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1783761827413,
+      "tag": "0003_silent_proemial_gods",
+      "breakpoints": true
     }
   ]
 }
