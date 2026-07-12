@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -47,6 +48,7 @@ const statusOptions: Array<WatchStatus | "all"> = [
   "dnf",
   "dns",
 ];
+const TITLE_SEARCH_DEBOUNCE_MS = 300;
 const SPLICE_DURATION_MS = 650;
 
 type DropTarget = {
@@ -114,6 +116,7 @@ export function MovieDataTable({
     { id: "rank", desc: false },
   ]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [titleSearch, setTitleSearch] = useState("");
   const [draggedMovieId, setDraggedMovieId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
   const [splicedMovieId, setSplicedMovieId] = useState<string | null>(null);
@@ -196,6 +199,17 @@ export function MovieDataTable({
     (table.getColumn("status")?.getFilterValue() as string) ?? "all";
   const watchedWithFilter =
     (table.getColumn("watchedWith")?.getFilterValue() as string) ?? "all";
+  const titleColumn = table.getColumn("title");
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      const query = titleSearch.trim();
+
+      titleColumn?.setFilterValue(query.length > 0 ? query : undefined);
+    }, TITLE_SEARCH_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [titleColumn, titleSearch]);
 
   function persistMovieOrder(
     nextData: MovieLedgerEntry[],
@@ -330,6 +344,19 @@ export function MovieDataTable({
               ))}
             </SelectContent>
           </Select>
+          <div className="w-full sm:w-56">
+            <label htmlFor="movie-title-table-search" className="sr-only">
+              Search movie titles
+            </label>
+            <Input
+              id="movie-title-table-search"
+              type="search"
+              value={titleSearch}
+              onChange={(event) => setTitleSearch(event.target.value)}
+              placeholder="Search titles"
+              className="h-8 rounded-none px-2"
+            />
+          </div>
         </div>
         <div className="flex items-center gap-3">
           {orderError ? (
