@@ -11,10 +11,14 @@ import { DatePickerField } from "@/components/movies/DatePickerField";
 import { WatchedWithCombobox } from "@/components/movies/WatchedWithCombobox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { MovieLedgerEntry } from "@/lib/movies";
+import type { MovieLedgerEntry, MovieWatchEntry } from "@/lib/movies";
 import { cn } from "@/lib/utils";
 
 export type EditableMovieEntryField = "watchedOn" | "language" | "watchedWith";
+export type EditableMovieEntry = Pick<
+  MovieLedgerEntry | MovieWatchEntry,
+  "watchEntryId" | "canEdit" | "title" | "watchedOn" | "language" | "watchedWith"
+>;
 
 export type MovieEntryEditTarget = {
   anchor: {
@@ -22,7 +26,7 @@ export type MovieEntryEditTarget = {
     top: number;
     width: number;
   };
-  entry: MovieLedgerEntry;
+  entry: EditableMovieEntry;
   field: EditableMovieEntryField;
 };
 
@@ -44,7 +48,7 @@ function getEditPanelAnchor(
 }
 
 function buildUpdateInput(
-  entry: MovieLedgerEntry,
+  entry: EditableMovieEntry,
   updates: Partial<
     Pick<MovieLedgerEntry, "watchedOn" | "language" | "watchedWith">
   >,
@@ -80,7 +84,7 @@ export function EditableMovieEntryCellButton({
   onEdit,
   value,
 }: {
-  entry: MovieLedgerEntry;
+  entry: EditableMovieEntry;
   field: Exclude<EditableMovieEntryField, "watchedWith">;
   isActive: boolean;
   onEdit: (target: MovieEntryEditTarget) => void;
@@ -112,7 +116,7 @@ export function EditableWatchedWithCellButton({
   onEdit,
   value,
 }: {
-  entry: MovieLedgerEntry;
+  entry: EditableMovieEntry;
   isActive: boolean;
   onEdit: (target: MovieEntryEditTarget) => void;
   value: string[];

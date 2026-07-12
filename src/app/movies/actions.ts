@@ -667,7 +667,6 @@ export async function deleteMovieEntry(
         columns: {
           id: true,
           userId: true,
-          movieId: true,
         },
       });
 
@@ -699,13 +698,6 @@ export async function deleteMovieEntry(
           ),
         );
       }
-
-      await tx.delete(movieRankings).where(
-        and(
-          eq(movieRankings.userId, session.user.id),
-          eq(movieRankings.movieId, watchEntry.movieId),
-        ),
-      );
     });
   } catch (error) {
     console.error("Failed to delete movie entry", error);

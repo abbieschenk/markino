@@ -12,6 +12,17 @@ import {
 
 export type WatchStatus = "watched" | "dnf" | "dns";
 
+export type MovieWatchEntry = {
+  movieId: string;
+  watchEntryId: string;
+  canEdit: boolean;
+  title: string;
+  watchedOn: string;
+  language: string;
+  status: WatchStatus;
+  watchedWith: string[];
+};
+
 export type MovieLedgerEntry = {
   id: string;
   movieId: string;
@@ -24,6 +35,8 @@ export type MovieLedgerEntry = {
   language: string;
   status: WatchStatus;
   watchedWith: string[];
+  watchCount: number;
+  watchEntries: MovieWatchEntry[];
 };
 
 export type MovieDetail = MovieLedgerEntry & {
@@ -122,6 +135,17 @@ function sortLedgerEntries(left: MovieLedgerEntry, right: MovieLedgerEntry) {
   return left.title.localeCompare(right.title, "en");
 }
 
+function sortWatchEntriesNewestFirst(
+  left: HydratedWatchEntry,
+  right: HydratedWatchEntry,
+) {
+  if (left.watchedOn !== right.watchedOn) {
+    return right.watchedOn.localeCompare(left.watchedOn);
+  }
+
+  return right.id.localeCompare(left.id, "en");
+}
+
 function mapWatchedWithHandles(entry: HydratedWatchEntry, userId: string) {
   const handles = new Set<string>();
 
@@ -138,11 +162,32 @@ function mapWatchedWithHandles(entry: HydratedWatchEntry, userId: string) {
   return Array.from(handles).sort((left, right) => left.localeCompare(right, "en"));
 }
 
+function mapWatchEntry(
+  entry: HydratedWatchEntry,
+  userId: string,
+): MovieWatchEntry {
+  return {
+    movieId: entry.movieId,
+    watchEntryId: entry.id,
+    canEdit: entry.userId === userId,
+    title: entry.movie.title,
+    watchedOn: entry.watchedOn,
+    language: entry.languageWatched,
+    status: entry.status,
+    watchedWith: mapWatchedWithHandles(entry, userId),
+  };
+}
+
 function mapLedgerEntry(
   entry: HydratedWatchEntry,
   userId: string,
   rank: number,
+  watchEntries: HydratedWatchEntry[],
 ): MovieLedgerEntry {
+  const mappedWatchEntries = watchEntries.map((watchEntry) =>
+    mapWatchEntry(watchEntry, userId),
+  );
+
   return {
     id: entry.movieId,
     movieId: entry.movieId,
@@ -155,6 +200,8 @@ function mapLedgerEntry(
     language: entry.languageWatched,
     status: entry.status,
     watchedWith: mapWatchedWithHandles(entry, userId),
+    watchCount: mappedWatchEntries.length,
+    watchEntries: mappedWatchEntries,
   };
 }
 
@@ -199,16 +246,29 @@ export async function getVisibleMovieIdsForUser(
 export async function getMovieLedgerForUser(
   userId: string,
 ): Promise<MovieLedgerEntry[]> {
-  const visibleEntries = selectLedgerEntriesByMovie(
-    await getVisibleWatchEntriesForUser(userId),
-  );
+  const visibleEntries = await getVisibleWatchEntriesForUser(userId);
 
   if (visibleEntries.length === 0) {
     return [];
   }
 
+  const entriesByMovieId = new Map<string, HydratedWatchEntry[]>();
+
+  for (const entry of visibleEntries) {
+    const movieEntries = entriesByMovieId.get(entry.movieId) ?? [];
+    movieEntries.push(entry);
+    entriesByMovieId.set(entry.movieId, movieEntries);
+  }
+
+  for (const movieEntries of entriesByMovieId.values()) {
+    movieEntries.sort(sortWatchEntriesNewestFirst);
+  }
+
+  const summaryEntries = Array.from(entriesByMovieId.values()).map(
+    (entries) => entries[0],
+  );
   const movieIds = Array.from(
-    new Set(visibleEntries.map((entry) => entry.movieId)),
+    new Set(summaryEntries.map((entry) => entry.movieId)),
   );
   const rankings = await db.query.movieRankings.findMany({
     where: and(
@@ -224,7 +284,7 @@ export async function getMovieLedgerForUser(
   const rankByMovieId = new Map(
     rankings.map((ranking) => [ranking.movieId, ranking.rank]),
   );
-  const sortedEntries = [...visibleEntries].sort((left, right) => {
+  const sortedEntries = [...summaryEntries].sort((left, right) => {
     const leftRank = rankByMovieId.get(left.movieId);
     const rightRank = rankByMovieId.get(right.movieId);
 
@@ -248,7 +308,14 @@ export async function getMovieLedgerForUser(
   });
 
   return sortedEntries
-    .map((entry, index) => mapLedgerEntry(entry, userId, index + 1))
+    .map((entry, index) =>
+      mapLedgerEntry(
+        entry,
+        userId,
+        index + 1,
+        entriesByMovieId.get(entry.movieId) ?? [entry],
+      ),
+    )
     .sort(sortLedgerEntries);
 }
 

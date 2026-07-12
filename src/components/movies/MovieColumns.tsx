@@ -28,15 +28,28 @@ import type { MovieLedgerEntry } from "@/lib/movies";
 
 const watchedWithFilter: FilterFn<MovieLedgerEntry> = (
   row,
-  columnId,
+  _columnId,
   filterValue,
 ) => {
   if (!filterValue || filterValue === "all") {
     return true;
   }
 
-  const people = row.getValue<string[]>(columnId);
-  return people.includes(filterValue);
+  return row.original.watchEntries.some((entry) =>
+    entry.watchedWith.includes(filterValue),
+  );
+};
+
+const watchStatusFilter: FilterFn<MovieLedgerEntry> = (
+  row,
+  _columnId,
+  filterValue,
+) => {
+  if (!filterValue || filterValue === "all") {
+    return true;
+  }
+
+  return row.original.watchEntries.some((entry) => entry.status === filterValue);
 };
 
 function SortIcon({ column }: { column: Column<MovieLedgerEntry> }) {
@@ -198,7 +211,7 @@ export function createMovieColumns({
         </span>
       );
     },
-    filterFn: "equals",
+    filterFn: watchStatusFilter,
   },
   {
     accessorKey: "watchedWith",

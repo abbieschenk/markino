@@ -1,8 +1,8 @@
 "use client";
 /* eslint-disable react-hooks/incompatible-library */
 
-import { DotsSixVertical } from "@phosphor-icons/react";
-import { startTransition, useEffect, useMemo, useState } from "react";
+import { CaretDown, CaretRight, DotsSixVertical } from "@phosphor-icons/react";
+import { Fragment, startTransition, useEffect, useMemo, useState } from "react";
 import type { DragEvent, ReactNode } from "react";
 import {
   type ColumnDef,
@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -36,6 +37,7 @@ import { cn } from "@/lib/utils";
 type MovieDataTableProps = {
   columns: ColumnDef<MovieLedgerEntry>[];
   data: MovieLedgerEntry[];
+  renderExpandedRow?: (entry: MovieLedgerEntry) => ReactNode;
   toolbarActions?: ReactNode;
 };
 
@@ -104,6 +106,7 @@ function moveMovieInRankOrder(
 export function MovieDataTable({
   columns,
   data,
+  renderExpandedRow,
   toolbarActions,
 }: MovieDataTableProps) {
   const [tableData, setTableData] = useState<MovieLedgerEntry[]>(data);
@@ -114,6 +117,9 @@ export function MovieDataTable({
   const [draggedMovieId, setDraggedMovieId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
   const [splicedMovieId, setSplicedMovieId] = useState<string | null>(null);
+  const [expandedMovieIds, setExpandedMovieIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
 
@@ -137,8 +143,10 @@ export function MovieDataTable({
     const people = new Set<string>();
 
     for (const movie of tableData) {
-      for (const person of movie.watchedWith) {
-        people.add(person);
+      for (const entry of movie.watchEntries) {
+        for (const person of entry.watchedWith) {
+          people.add(person);
+        }
       }
     }
 
@@ -147,6 +155,20 @@ export function MovieDataTable({
       ...Array.from(people).sort((left, right) => left.localeCompare(right)),
     ];
   }, [tableData]);
+
+  function toggleExpandedMovie(movieId: string) {
+    setExpandedMovieIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(movieId)) {
+        next.delete(movieId);
+      } else {
+        next.add(movieId);
+      }
+
+      return next;
+    });
+  }
 
   const canReorder =
     sorting.length === 1 &&
@@ -364,72 +386,130 @@ export function MovieDataTable({
         </TableHeader>
         <TableBody>
           {table.getRowModel().rows.length > 0 ? (
-            table.getRowModel().rows.map((row) => (
-              <TableRow
-                key={row.id}
-                className={cn(
-                  draggedMovieId === row.original.movieId && "opacity-50",
-                  dropTarget?.movieId === row.original.movieId &&
-                    dropTarget.position === "before" &&
-                    "shadow-[inset_0_2px_0_0_var(--foreground)]",
-                  dropTarget?.movieId === row.original.movieId &&
-                    dropTarget.position === "after" &&
-                    "shadow-[inset_0_-2px_0_0_var(--foreground)]",
-                  splicedMovieId === row.original.movieId &&
-                    "movie-row-splice",
-                )}
-                onDragOver={(event) =>
-                  handleDragOver(event, row.original.movieId)
-                }
-                onDrop={(event) => handleDrop(event, row.original.movieId)}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {cell.column.id === "rank" ? (
-                      <div className="flex items-center gap-1">
-                        {canReorder ? (
-                          <button
-                            type="button"
-                            draggable={canDragReorder}
-                            disabled={!canDragReorder}
-                            aria-label={`Reorder ${row.original.title}`}
-                            title={
-                              canDragReorder ? "Drag to reorder" : "Saving order"
-                            }
-                            className={cn(
-                              "-ml-1 flex size-5 items-center justify-center text-muted-foreground transition-opacity ease-out",
-                              shouldFadeHandles
-                                ? "opacity-35 duration-150"
-                                : "opacity-100 duration-[650ms]",
-                              canDragReorder
-                                ? "cursor-grab hover:text-foreground active:cursor-grabbing"
-                                : "cursor-default",
-                            )}
-                            onDragStart={(event) =>
-                              handleDragStart(event, row.original.movieId)
-                            }
-                            onDragEnd={handleDragEnd}
-                          >
-                            <DotsSixVertical
-                              className="size-3.5"
-                              weight="regular"
-                            />
-                          </button>
-                        ) : (
-                          <span
-                            aria-hidden="true"
-                            className="-ml-1 block size-5 shrink-0"
-                          />
-                        )}
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </div>
-                    ) : (
-                      flexRender(cell.column.columnDef.cell, cell.getContext())
+            table.getRowModel().rows.map((row) => {
+              const isExpanded = expandedMovieIds.has(row.original.movieId);
+              const canExpand =
+                row.original.watchCount > 1 && renderExpandedRow != null;
+
+              return (
+                <Fragment key={row.id}>
+                  <TableRow
+                    className={cn(
+                      draggedMovieId === row.original.movieId && "opacity-50",
+                      dropTarget?.movieId === row.original.movieId &&
+                        dropTarget.position === "before" &&
+                        "shadow-[inset_0_2px_0_0_var(--foreground)]",
+                      dropTarget?.movieId === row.original.movieId &&
+                        dropTarget.position === "after" &&
+                        "shadow-[inset_0_-2px_0_0_var(--foreground)]",
+                      splicedMovieId === row.original.movieId &&
+                        "movie-row-splice",
                     )}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
+                    onDragOver={(event) =>
+                      handleDragOver(event, row.original.movieId)
+                    }
+                    onDrop={(event) => handleDrop(event, row.original.movieId)}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {cell.column.id === "rank" ? (
+                          <div className="flex items-center gap-1">
+                            {canReorder ? (
+                              <button
+                                type="button"
+                                draggable={canDragReorder}
+                                disabled={!canDragReorder}
+                                aria-label={`Reorder ${row.original.title}`}
+                                title={
+                                  canDragReorder
+                                    ? "Drag to reorder"
+                                    : "Saving order"
+                                }
+                                className={cn(
+                                  "-ml-1 flex size-5 items-center justify-center text-muted-foreground transition-opacity ease-out",
+                                  shouldFadeHandles
+                                    ? "opacity-35 duration-150"
+                                    : "opacity-100 duration-[650ms]",
+                                  canDragReorder
+                                    ? "cursor-grab hover:text-foreground active:cursor-grabbing"
+                                    : "cursor-default",
+                                )}
+                                onDragStart={(event) =>
+                                  handleDragStart(event, row.original.movieId)
+                                }
+                                onDragEnd={handleDragEnd}
+                              >
+                                <DotsSixVertical
+                                  className="size-3.5"
+                                  weight="regular"
+                                />
+                              </button>
+                            ) : (
+                              <span
+                                aria-hidden="true"
+                                className="-ml-1 block size-5 shrink-0"
+                              />
+                            )}
+                            {canExpand ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 gap-0.5 rounded-none px-1 text-[11px] text-muted-foreground hover:bg-transparent hover:text-foreground"
+                                aria-expanded={isExpanded}
+                                aria-label={`${isExpanded ? "Collapse" : "Expand"} ${row.original.title} watch history`}
+                                title={
+                                  isExpanded
+                                    ? "Collapse watch history"
+                                    : "Expand watch history"
+                                }
+                                onClick={() =>
+                                  toggleExpandedMovie(row.original.movieId)
+                                }
+                              >
+                                {isExpanded ? (
+                                  <CaretDown
+                                    className="size-3"
+                                    weight="regular"
+                                  />
+                                ) : (
+                                  <CaretRight
+                                    className="size-3"
+                                    weight="regular"
+                                  />
+                                )}
+                                {row.original.watchCount}
+                              </Button>
+                            ) : (
+                              <span
+                                aria-hidden="true"
+                                className="block h-6 w-8 shrink-0"
+                              />
+                            )}
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext(),
+                            )}
+                          </div>
+                        ) : (
+                          flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  {isExpanded && renderExpandedRow ? (
+                    <TableRow className="bg-[var(--muted)]/30 hover:bg-[var(--muted)]/30">
+                      <TableCell colSpan={columns.length} className="p-0">
+                        {renderExpandedRow(row.original)}
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </Fragment>
+              );
+            })
           ) : (
             <TableRow>
               <TableCell
