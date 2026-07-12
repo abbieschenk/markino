@@ -3,8 +3,9 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { ChartPanel } from "@/components/charts/chart-panel";
+import { GenreOverTimeChart } from "@/components/charts/genre-over-time-chart";
+import { LabelCountBarChart } from "@/components/charts/label-count-bar-chart";
 import { ReleaseYearChart } from "@/components/charts/release-year-chart";
-import { TopPeopleChart } from "@/components/charts/top-people-chart";
 import { WatchedOverTimeChart } from "@/components/charts/watched-over-time-chart";
 import { auth } from "@/lib/auth";
 import { getMovieChartStatsForUser } from "@/lib/movie-chart-stats";
@@ -41,15 +42,26 @@ export default async function ChartsPage() {
           <ReleaseYearChart data={stats.releaseYears} />
         </ChartPanel>
 
+        <ChartPanel title="Top Genres" eyebrow="Top 10">
+          <LabelCountBarChart
+            data={stats.topGenres}
+            emptyLabel="No genre metadata synced yet."
+          />
+        </ChartPanel>
+
+        <ChartPanel title="Genres Over Time" eyebrow="Top 5 genres">
+          <GenreOverTimeChart data={stats.genreOverTime} />
+        </ChartPanel>
+
         <ChartPanel title="Top Directors" eyebrow="Top 10">
-          <TopPeopleChart
+          <LabelCountBarChart
             data={stats.topDirectors}
             emptyLabel="No director metadata synced yet."
           />
         </ChartPanel>
 
         <ChartPanel title="Top Actors" eyebrow="Top-billed cast, top 10">
-          <TopPeopleChart
+          <LabelCountBarChart
             data={stats.topActors}
             emptyLabel="No cast metadata synced yet."
           />

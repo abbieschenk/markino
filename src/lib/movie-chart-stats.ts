@@ -3,7 +3,7 @@ import "server-only";
 import { and, asc, eq, inArray, lte } from "drizzle-orm";
 
 import { db } from "@/db";
-import { movieCredits, movies, people } from "@/db/schema";
+import { genres, movieCredits, movieGenres, movies, people } from "@/db/schema";
 import {
   getMovieLedgerForUser,
   getVisibleWatchEntriesForUser,
@@ -22,9 +22,17 @@ export type LabelCount = {
   movies: string[];
 };
 
+export type GenreOverTimeCount = {
+  month: string;
+  label: string;
+  moviesByGenre: Record<string, string[]>;
+} & Record<string, string | number | Record<string, string[]>>;
+
 export type MovieChartStats = {
   monthlyWatched: MonthlyWatchedCount[];
   releaseYears: LabelCount[];
+  topGenres: LabelCount[];
+  genreOverTime: GenreOverTimeCount[];
   topDirectors: LabelCount[];
   topActors: LabelCount[];
 };
@@ -286,6 +294,106 @@ async function getTopActors(
   return toTopMovieCounts(movieIdsByActor, movieTitleById, rankByMovieId);
 }
 
+async function getGenreStats(
+  visibleEntries: Awaited<ReturnType<typeof getVisibleWatchEntriesForUser>>,
+  monthlyWatched: MonthlyWatchedCount[],
+  movieTitleById: Map<string, string>,
+  rankByMovieId: Map<string, number>,
+) {
+  const visibleMovieIds = Array.from(
+    new Set(visibleEntries.map((entry) => entry.movieId)),
+  );
+
+  if (visibleMovieIds.length === 0) {
+    return {
+      topGenres: [],
+      genreOverTime: [],
+    };
+  }
+
+  const rows = await db
+    .select({
+      movieId: movieGenres.movieId,
+      genre: genres.name,
+    })
+    .from(movieGenres)
+    .innerJoin(genres, eq(movieGenres.genreId, genres.id))
+    .where(inArray(movieGenres.movieId, visibleMovieIds));
+
+  const genresByMovieId = new Map<string, Set<string>>();
+  const movieIdsByGenre = new Map<string, Set<string>>();
+
+  for (const row of rows) {
+    const movieGenresForMovie =
+      genresByMovieId.get(row.movieId) ?? new Set<string>();
+    movieGenresForMovie.add(row.genre);
+    genresByMovieId.set(row.movieId, movieGenresForMovie);
+    addMovieForLabel(movieIdsByGenre, row.genre, row.movieId);
+  }
+
+  const topGenres = toTopMovieCounts(
+    movieIdsByGenre,
+    movieTitleById,
+    rankByMovieId,
+  );
+  const timelineGenres = topGenres.slice(0, 5).map((genre) => genre.label);
+  const timelineGenreSet = new Set(timelineGenres);
+  const moviesByMonthAndGenre = new Map<string, Map<string, MovieTooltipEntry[]>>(
+    monthlyWatched.map((month) => [month.month, new Map()]),
+  );
+
+  for (const entry of visibleEntries) {
+    const entryGenres = genresByMovieId.get(entry.movieId);
+
+    if (!entryGenres) {
+      continue;
+    }
+
+    const month = entry.watchedOn.slice(0, 7);
+    const moviesByGenre = moviesByMonthAndGenre.get(month);
+
+    if (!moviesByGenre) {
+      continue;
+    }
+
+    for (const genre of entryGenres) {
+      if (!timelineGenreSet.has(genre)) {
+        continue;
+      }
+
+      const movies = moviesByGenre.get(genre) ?? [];
+      movies.push({
+        movieId: entry.movieId,
+        title: entry.movie.title,
+        watchedOn: entry.watchedOn,
+      });
+      moviesByGenre.set(genre, movies);
+    }
+  }
+
+  const genreOverTime = monthlyWatched.map((month) => {
+    const moviesByGenre = moviesByMonthAndGenre.get(month.month) ?? new Map();
+    const item: GenreOverTimeCount = {
+      month: month.month,
+      label: month.label,
+      moviesByGenre: {},
+    };
+
+    for (const genre of timelineGenres) {
+      const movies = sortMoviesByWatchedOn(moviesByGenre.get(genre) ?? []);
+      item[genre] = movies.length;
+      item.moviesByGenre[genre] = movies;
+    }
+
+    return item;
+  });
+
+  return {
+    topGenres,
+    genreOverTime,
+  };
+}
+
 export async function getMovieChartStatsForUser(
   userId: string,
 ): Promise<MovieChartStats> {
@@ -329,10 +437,17 @@ export async function getMovieChartStatsForUser(
   const movieTitleById = new Map(
     visibleEntries.map((entry) => [entry.movieId, entry.movie.title]),
   );
-  const [topDirectors, topActors] = await Promise.all([
-    getTopDirectors(visibleMovieIds, movieTitleById, rankByMovieId),
-    getTopActors(visibleMovieIds, movieTitleById, rankByMovieId),
-  ]);
+  const [{ topGenres, genreOverTime }, topDirectors, topActors] =
+    await Promise.all([
+      getGenreStats(
+        visibleEntries,
+        monthlyWatched,
+        movieTitleById,
+        rankByMovieId,
+      ),
+      getTopDirectors(visibleMovieIds, movieTitleById, rankByMovieId),
+      getTopActors(visibleMovieIds, movieTitleById, rankByMovieId),
+    ]);
 
   return {
     monthlyWatched: monthlyWatched.map((month) => {
@@ -360,6 +475,8 @@ export async function getMovieChartStatsForUser(
         ),
       }))
       .sort((left, right) => Number(left.label) - Number(right.label)),
+    topGenres,
+    genreOverTime,
     topDirectors,
     topActors,
   };

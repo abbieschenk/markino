@@ -3,18 +3,18 @@
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, LabelList, XAxis, YAxis } from "recharts";
 
-import type { LabelCount } from "@/lib/movie-chart-stats";
-import {
-  ChartContainer,
-  ChartTooltip,
-  type ChartConfig,
-} from "@/components/ui/chart";
 import {
   getActiveChartDataIndex,
   MovieListTooltip,
   PinnedMovieListTooltipOverlay,
   type PinnedMovieListTooltip,
 } from "@/components/charts/movie-list-tooltip";
+import {
+  ChartContainer,
+  ChartTooltip,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import type { LabelCount } from "@/lib/movie-chart-stats";
 
 const chartConfig = {
   count: {
@@ -23,7 +23,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-type TopPeopleChartProps = {
+type LabelCountBarChartProps = {
   data: LabelCount[];
   emptyLabel: string;
 };
@@ -32,7 +32,10 @@ function truncateLabel(label: string) {
   return label.length > 18 ? `${label.slice(0, 17)}...` : label;
 }
 
-export function TopPeopleChart({ data, emptyLabel }: TopPeopleChartProps) {
+export function LabelCountBarChart({
+  data,
+  emptyLabel,
+}: LabelCountBarChartProps) {
   const [pinnedTooltip, setPinnedTooltip] =
     useState<PinnedMovieListTooltip | null>(null);
 
