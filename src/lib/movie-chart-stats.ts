@@ -41,9 +41,20 @@ export type GenreOverTimeCount = {
   moviesByGenre: Record<string, string[]>;
 } & Record<string, string | number | Record<string, string[]>>;
 
+export type MovieMoneyOverTimeCount = {
+  period: string;
+  label: string;
+  budget: number;
+  revenue: number;
+  movieCount: number;
+  movies: string[];
+};
+
 export type MovieChartStats = {
   monthlyWatched: MonthlyWatchedCount[];
   yearlyWatched: YearlyWatchedCount[];
+  monthlyMoneyOverTime: MovieMoneyOverTimeCount[];
+  yearlyMoneyOverTime: MovieMoneyOverTimeCount[];
   watchedByMonth: WatchedByMonthCount[];
   yearOnlyWatchedOmittedFromMonthly: number;
   releaseYears: LabelCount[];
@@ -559,6 +570,66 @@ function buildGenreOverTime({
   });
 }
 
+function buildMovieMoneyOverTime({
+  buckets,
+  entries,
+  getBucketKey,
+}: {
+  buckets: { key: string; label: string }[];
+  entries: Awaited<ReturnType<typeof getVisibleWatchEntriesForUser>>;
+  getBucketKey: (
+    entry: Awaited<ReturnType<typeof getVisibleWatchEntriesForUser>>[number],
+  ) => string | null;
+}) {
+  const entriesByBucket = new Map<
+    string,
+    Awaited<ReturnType<typeof getVisibleWatchEntriesForUser>>
+  >(buckets.map((bucket) => [bucket.key, []]));
+
+  for (const entry of entries) {
+    const bucketKey = getBucketKey(entry);
+    const bucketEntries = bucketKey ? entriesByBucket.get(bucketKey) : null;
+
+    if (!bucketEntries) {
+      continue;
+    }
+
+    bucketEntries.push(entry);
+  }
+
+  return buckets.map((bucket) => {
+    const bucketEntries = entriesByBucket.get(bucket.key) ?? [];
+    const moneyEntries = bucketEntries.filter(
+      (entry) =>
+        (entry.movie.budget != null && entry.movie.budget > 0) ||
+        (entry.movie.revenue != null && entry.movie.revenue > 0),
+    );
+
+    return {
+      period: bucket.key,
+      label: bucket.label,
+      budget: moneyEntries.reduce(
+        (total, entry) => total + Math.max(entry.movie.budget ?? 0, 0),
+        0,
+      ),
+      revenue: moneyEntries.reduce(
+        (total, entry) => total + Math.max(entry.movie.revenue ?? 0, 0),
+        0,
+      ),
+      movieCount: moneyEntries.length,
+      movies: sortMoviesByWatchedOn(
+        moneyEntries.map((entry) => ({
+          movieId: entry.movieId,
+          title: entry.movie.title,
+          watchedOn: entry.watchedOn,
+          watchedYear: getWatchedYear(entry.watchedOn),
+          watchedDatePrecision: entry.watchedDatePrecision,
+        })),
+      ),
+    };
+  });
+}
+
 export async function getMovieChartStatsForUser(
   userId: string,
 ): Promise<MovieChartStats> {
@@ -663,6 +734,22 @@ export async function getMovieChartStatsForUser(
         count: movies.length,
         movies,
       };
+    }),
+    monthlyMoneyOverTime: buildMovieMoneyOverTime({
+      buckets: monthlyWatched.map((month) => ({
+        key: month.month,
+        label: month.label,
+      })),
+      entries: exactDateEntries,
+      getBucketKey: (entry) => entry.watchedOn.slice(0, 7),
+    }),
+    yearlyMoneyOverTime: buildMovieMoneyOverTime({
+      buckets: yearlyWatched.map((year) => ({
+        key: year.year,
+        label: year.label,
+      })),
+      entries: visibleEntries,
+      getBucketKey: (entry) => entry.watchedOn.slice(0, 4),
     }),
     watchedByMonth: getWatchedByMonth(visibleEntries),
     yearOnlyWatchedOmittedFromMonthly: visibleEntries.filter(

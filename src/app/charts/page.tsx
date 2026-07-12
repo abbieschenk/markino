@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { ChartPanel } from "@/components/charts/chart-panel";
 import { GenreOverTimeChart } from "@/components/charts/genre-over-time-chart";
 import { LabelCountBarChart } from "@/components/charts/label-count-bar-chart";
+import { MovieMoneyOverTimeChart } from "@/components/charts/movie-money-over-time-chart";
 import { ReleaseYearChart } from "@/components/charts/release-year-chart";
 import { WatchedByMonthChart } from "@/components/charts/watched-by-month-chart";
 import { WatchedOverTimeChart } from "@/components/charts/watched-over-time-chart";
@@ -35,19 +36,23 @@ export default async function ChartsPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <ChartPanel title="Watched Over Time" eyebrow="All time">
-          <WatchedOverTimeChart
-            monthlyData={stats.monthlyWatched}
-            yearlyData={stats.yearlyWatched}
-            monthlyOmittedCount={stats.yearOnlyWatchedOmittedFromMonthly}
-          />
-        </ChartPanel>
+        <WatchedOverTimeChart
+          monthlyData={stats.monthlyWatched}
+          yearlyData={stats.yearlyWatched}
+          monthlyOmittedCount={stats.yearOnlyWatchedOmittedFromMonthly}
+        />
 
         <ChartPanel title="Watched by Month (%)">
           <WatchedByMonthChart data={stats.watchedByMonth} />
         </ChartPanel>
 
-        <ChartPanel title="Release Years">
+        <MovieMoneyOverTimeChart
+          monthlyData={stats.monthlyMoneyOverTime}
+          yearlyData={stats.yearlyMoneyOverTime}
+          monthlyOmittedCount={stats.yearOnlyWatchedOmittedFromMonthly}
+        />
+
+        <ChartPanel title="Release Years" contentClassName="mt-auto">
           <ReleaseYearChart data={stats.releaseYears} />
         </ChartPanel>
 
