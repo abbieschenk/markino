@@ -50,10 +50,14 @@ export type MovieChartStats = {
 type MovieTooltipEntry = {
   movieId: string;
   title: string;
-  watchedOn?: string | null;
+  watchedOn?: string;
   watchedYear?: number;
   watchedDatePrecision?: "day" | "year";
 };
+
+function getWatchedYear(watchedOn: string) {
+  return Number(watchedOn.slice(0, 4));
+}
 
 function getMonthIndex(month: string) {
   const [year, monthNumber] = month.split("-").map(Number);
@@ -414,7 +418,7 @@ async function getGenreStats(
       genresByMovieId,
       timelineGenres,
       timelineGenreSet,
-      getBucketKey: (entry) => String(entry.watchedYear).padStart(4, "0"),
+      getBucketKey: (entry) => entry.watchedOn.slice(0, 4),
     }),
   };
 }
@@ -467,7 +471,7 @@ function buildGenreOverTime({
         movieId: entry.movieId,
         title: entry.movie.title,
         watchedOn: entry.watchedOn,
-        watchedYear: entry.watchedYear,
+        watchedYear: getWatchedYear(entry.watchedOn),
         watchedDatePrecision: entry.watchedDatePrecision,
       });
       moviesByGenre.set(genre, movies);
@@ -501,13 +505,13 @@ export async function getMovieChartStatsForUser(
     rankedLedger.map((entry) => [entry.movieId, entry.rank]),
   );
   const exactDateEntries = visibleEntries.filter(
-    (entry) => entry.watchedDatePrecision === "day" && entry.watchedOn != null,
+    (entry) => entry.watchedDatePrecision === "day",
   );
   const monthlyWatched = getAllWatchedMonths(
-    exactDateEntries.map((entry) => entry.watchedOn as string),
+    exactDateEntries.map((entry) => entry.watchedOn),
   );
   const yearlyWatched = getAllWatchedYears(
-    visibleEntries.map((entry) => entry.watchedYear),
+    visibleEntries.map((entry) => getWatchedYear(entry.watchedOn)),
   );
   const moviesByMonth = new Map<string, MovieTooltipEntry[]>(
     monthlyWatched.map((month) => [month.month, []]),
@@ -518,7 +522,7 @@ export async function getMovieChartStatsForUser(
   const movieIdsByReleaseYear = new Map<string, Set<string>>();
 
   for (const entry of visibleEntries) {
-    if (entry.watchedDatePrecision === "day" && entry.watchedOn) {
+    if (entry.watchedDatePrecision === "day") {
       const month = entry.watchedOn.slice(0, 7);
       const monthMovies = moviesByMonth.get(month);
 
@@ -527,14 +531,14 @@ export async function getMovieChartStatsForUser(
           movieId: entry.movieId,
           title: entry.movie.title,
           watchedOn: entry.watchedOn,
-          watchedYear: entry.watchedYear,
+          watchedYear: getWatchedYear(entry.watchedOn),
           watchedDatePrecision: entry.watchedDatePrecision,
         });
       }
     }
 
     const yearMovies = moviesByYear.get(
-      String(entry.watchedYear).padStart(4, "0"),
+      entry.watchedOn.slice(0, 4),
     );
 
     if (yearMovies) {
@@ -542,7 +546,7 @@ export async function getMovieChartStatsForUser(
         movieId: entry.movieId,
         title: entry.movie.title,
         watchedOn: entry.watchedOn,
-        watchedYear: entry.watchedYear,
+        watchedYear: getWatchedYear(entry.watchedOn),
         watchedDatePrecision: entry.watchedDatePrecision,
       });
     }

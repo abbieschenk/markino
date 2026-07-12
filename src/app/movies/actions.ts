@@ -42,8 +42,7 @@ type MovieActionResult = {
 };
 type UpdateMovieEntryInput = {
   watchEntryId: string;
-  watchedOn: string | null;
-  watchedYear: number;
+  watchedOn: string;
   watchedDatePrecision: WatchDatePrecisionValue;
   languageWatched: string;
   watchedWithHandles: string[];
@@ -59,8 +58,7 @@ type MovieEntryInput = {
   watchedWithHandles: string[];
 };
 type ParsedWatchDateInput = {
-  watchedOn: string | null;
-  watchedYear: number;
+  watchedOn: string;
   watchedDatePrecision: WatchDatePrecisionValue;
 };
 type ParsedMovieEntryInput = Omit<
@@ -145,7 +143,6 @@ function parseWatchedDateInput({
 
     return {
       watchedOn,
-      watchedYear: Number(watchedOn.slice(0, 4)),
       watchedDatePrecision: "day",
     };
   }
@@ -157,8 +154,7 @@ function parseWatchedDateInput({
   }
 
   return {
-    watchedOn: null,
-    watchedYear,
+    watchedOn: String(watchedYear).padStart(4, "0"),
     watchedDatePrecision: "year",
   };
 }
@@ -178,8 +174,7 @@ function parseUpdateMovieEntryInput(
 ): UpdateMovieEntryInput {
   return {
     watchEntryId: input.watchEntryId.trim(),
-    watchedOn: input.watchedOn?.trim() || null,
-    watchedYear: input.watchedYear,
+    watchedOn: input.watchedOn.trim(),
     watchedDatePrecision: input.watchedDatePrecision,
     languageWatched: input.languageWatched.trim() || "English",
     watchedWithHandles: Array.from(
@@ -716,7 +711,6 @@ export async function addMovieEntry(
             userId: session.user.id,
             movieId,
             watchedOn: entry.watchedOn,
-            watchedYear: entry.watchedYear,
             watchedDatePrecision: entry.watchedDatePrecision,
             languageWatched: entry.languageWatched,
             status: entry.status,
@@ -856,8 +850,10 @@ export async function updateMovieEntry(
   }
 
   const watchedDate = parseWatchedDateInput({
-    rawWatchedOn: entry.watchedOn ?? "",
-    rawWatchedYear: String(entry.watchedYear),
+    rawWatchedOn:
+      entry.watchedDatePrecision === "day" ? entry.watchedOn : "",
+    rawWatchedYear:
+      entry.watchedDatePrecision === "year" ? entry.watchedOn : "",
     rawWatchedDatePrecision: entry.watchedDatePrecision,
   });
 
@@ -915,7 +911,6 @@ export async function updateMovieEntry(
         .update(watchEntries)
         .set({
           watchedOn: watchedDate.watchedOn,
-          watchedYear: watchedDate.watchedYear,
           watchedDatePrecision: watchedDate.watchedDatePrecision,
           languageWatched: entry.languageWatched,
           updatedAt: new Date(),

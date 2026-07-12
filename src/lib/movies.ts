@@ -18,7 +18,7 @@ export type MovieWatchEntry = {
   watchEntryId: string;
   canEdit: boolean;
   title: string;
-  watchedOn: string | null;
+  watchedOn: string;
   watchedYear: number;
   watchedDatePrecision: WatchDatePrecision;
   watchedDateDisplay: string;
@@ -35,7 +35,7 @@ export type MovieLedgerEntry = {
   rank: number;
   title: string;
   isMetadataSynced: boolean;
-  watchedOn: string | null;
+  watchedOn: string;
   watchedYear: number;
   watchedDatePrecision: WatchDatePrecision;
   watchedDateDisplay: string;
@@ -130,21 +130,30 @@ async function getParticipantWatchEntries(userId: string) {
 
 type HydratedWatchEntry = Awaited<ReturnType<typeof getOwnedWatchEntries>>[number];
 
-function formatWatchDate(entry: Pick<HydratedWatchEntry, "watchedOn" | "watchedYear" | "watchedDatePrecision">) {
-  return entry.watchedDatePrecision === "year"
-    ? String(entry.watchedYear).padStart(4, "0")
-    : (entry.watchedOn ?? String(entry.watchedYear).padStart(4, "0"));
+function getWatchedYear(entry: Pick<HydratedWatchEntry, "watchedOn">) {
+  return Number(entry.watchedOn.slice(0, 4));
+}
+
+function formatWatchDate(entry: Pick<HydratedWatchEntry, "watchedOn">) {
+  return entry.watchedOn;
 }
 
 function compareWatchEntriesNewestFirst(
-  left: Pick<HydratedWatchEntry, "id" | "watchedOn" | "watchedYear" | "watchedDatePrecision">,
-  right: Pick<HydratedWatchEntry, "id" | "watchedOn" | "watchedYear" | "watchedDatePrecision">,
+  left: Pick<HydratedWatchEntry, "id" | "watchedOn" | "watchedDatePrecision">,
+  right: Pick<HydratedWatchEntry, "id" | "watchedOn" | "watchedDatePrecision">,
 ) {
-  if (left.watchedYear !== right.watchedYear) {
-    return right.watchedYear - left.watchedYear;
+  const leftWatchedYear = getWatchedYear(left);
+  const rightWatchedYear = getWatchedYear(right);
+
+  if (leftWatchedYear !== rightWatchedYear) {
+    return rightWatchedYear - leftWatchedYear;
   }
 
-  if (left.watchedOn && right.watchedOn && left.watchedOn !== right.watchedOn) {
+  if (
+    left.watchedDatePrecision === "day" &&
+    right.watchedDatePrecision === "day" &&
+    left.watchedOn !== right.watchedOn
+  ) {
     return right.watchedOn.localeCompare(left.watchedOn);
   }
 
@@ -164,7 +173,11 @@ function sortLedgerEntries(left: MovieLedgerEntry, right: MovieLedgerEntry) {
     return right.watchedYear - left.watchedYear;
   }
 
-  if (left.watchedOn && right.watchedOn && left.watchedOn !== right.watchedOn) {
+  if (
+    left.watchedDatePrecision === "day" &&
+    right.watchedDatePrecision === "day" &&
+    left.watchedOn !== right.watchedOn
+  ) {
     return right.watchedOn.localeCompare(left.watchedOn);
   }
 
@@ -208,7 +221,7 @@ function mapWatchEntry(
     canEdit: entry.userId === userId,
     title: entry.movie.title,
     watchedOn: entry.watchedOn,
-    watchedYear: entry.watchedYear,
+    watchedYear: getWatchedYear(entry),
     watchedDatePrecision: entry.watchedDatePrecision,
     watchedDateDisplay: formatWatchDate(entry),
     language: entry.languageWatched,
@@ -236,7 +249,7 @@ function mapLedgerEntry(
     title: entry.movie.title,
     isMetadataSynced: entry.movie.tmdbId != null,
     watchedOn: entry.watchedOn,
-    watchedYear: entry.watchedYear,
+    watchedYear: getWatchedYear(entry),
     watchedDatePrecision: entry.watchedDatePrecision,
     watchedDateDisplay: formatWatchDate(entry),
     language: entry.languageWatched,

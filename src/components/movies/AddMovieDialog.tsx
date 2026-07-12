@@ -313,7 +313,7 @@ export function AddMovieDialog({
                             value={row.watchedYear}
                             placeholder="YYYY"
                             inputMode="numeric"
-                            pattern="\\d{4}"
+                            pattern="[0-9]{4}"
                             maxLength={4}
                             required
                             autoComplete="off"

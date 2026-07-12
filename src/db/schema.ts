@@ -345,8 +345,7 @@ export const watchEntries = pgTable(
     movieId: uuid("movie_id")
       .notNull()
       .references(() => movies.id, { onDelete: "cascade" }),
-    watchedOn: date("watched_on", { mode: "string" }),
-    watchedYear: integer("watched_year").notNull(),
+    watchedOn: varchar("watched_on", { length: 10 }).notNull(),
     watchedDatePrecision: watchedDatePrecisionEnum("watched_date_precision")
       .default("day")
       .notNull(),
@@ -364,7 +363,6 @@ export const watchEntries = pgTable(
     index("watch_entries_user_id_idx").on(table.userId),
     index("watch_entries_movie_id_idx").on(table.movieId),
     index("watch_entries_watched_on_idx").on(table.watchedOn),
-    index("watch_entries_watched_year_idx").on(table.watchedYear),
   ],
 );
 

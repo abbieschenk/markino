@@ -385,6 +385,8 @@ export function MovieDataTable({
                   className={
                     header.column.id === "rank"
                       ? "w-16"
+                      : header.column.id === "title"
+                        ? "w-[28rem] max-w-[28rem]"
                       : header.column.id === "watchedOn"
                         ? "w-36"
                         : header.column.id === "isMetadataSynced"

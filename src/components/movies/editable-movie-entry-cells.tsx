@@ -71,19 +71,13 @@ function buildUpdateInput(
   updates: Partial<
     Pick<
       MovieLedgerEntry,
-      | "watchedOn"
-      | "watchedYear"
-      | "watchedDatePrecision"
-      | "language"
-      | "watchedWith"
+      "watchedOn" | "watchedDatePrecision" | "language" | "watchedWith"
     >
   >,
 ) {
   return {
     watchEntryId: entry.watchEntryId,
-    watchedOn: "watchedOn" in updates ? updates.watchedOn ?? null : entry.watchedOn,
-    watchedYear:
-      "watchedYear" in updates ? updates.watchedYear ?? entry.watchedYear : entry.watchedYear,
+    watchedOn: "watchedOn" in updates ? updates.watchedOn ?? "" : entry.watchedOn,
     watchedDatePrecision: "watchedDatePrecision" in updates
       ? updates.watchedDatePrecision ?? entry.watchedDatePrecision
       : entry.watchedDatePrecision,
@@ -211,10 +205,12 @@ export function MovieEntryEditPanel({
   const fieldId = useId();
   const [draftText, setDraftText] = useState(target.entry.language);
   const [draftWatchedOn, setDraftWatchedOn] = useState(
-    target.entry.watchedOn ?? "",
+    target.entry.watchedDatePrecision === "day" ? target.entry.watchedOn : "",
   );
   const [draftWatchedYear, setDraftWatchedYear] = useState(
-    String(target.entry.watchedYear).padStart(4, "0"),
+    target.entry.watchedDatePrecision === "year"
+      ? target.entry.watchedOn
+      : String(target.entry.watchedYear).padStart(4, "0"),
   );
   const [draftDatePrecision, setDraftDatePrecision] =
     useState<WatchDatePrecision>(target.entry.watchedDatePrecision);
@@ -227,20 +223,16 @@ export function MovieEntryEditPanel({
     const nextTextValue = draftText.trim();
     const currentWatchedWith = [...target.entry.watchedWith].sort().join("\n");
     const nextWatchedWith = [...draftWatchedWith].sort().join("\n");
-    const nextWatchedOn =
-      draftDatePrecision === "day" ? draftWatchedOn.trim() : null;
-    const nextWatchedYearText =
+    const nextWatchedValue =
       draftDatePrecision === "day"
-        ? draftWatchedOn.trim().slice(0, 4)
+        ? draftWatchedOn.trim()
         : draftWatchedYear.trim();
-    const nextWatchedYear = Number(nextWatchedYearText);
     const hasChanged =
       target.field === "watchedWith"
         ? nextWatchedWith !== currentWatchedWith
         : target.field === "language"
           ? nextTextValue !== target.entry.language
-          : nextWatchedOn !== target.entry.watchedOn ||
-            nextWatchedYear !== target.entry.watchedYear ||
+          : nextWatchedValue !== target.entry.watchedOn ||
             draftDatePrecision !== target.entry.watchedDatePrecision;
 
     if (!hasChanged) {
@@ -255,9 +247,8 @@ export function MovieEntryEditPanel({
         const result = await updateMovieEntry(
           buildUpdateInput(target.entry, {
             language: target.field === "language" ? nextTextValue : undefined,
-            watchedOn: target.field === "watchedOn" ? nextWatchedOn : undefined,
-            watchedYear:
-              target.field === "watchedOn" ? nextWatchedYear : undefined,
+            watchedOn:
+              target.field === "watchedOn" ? nextWatchedValue : undefined,
             watchedDatePrecision:
               target.field === "watchedOn" ? draftDatePrecision : undefined,
             watchedWith:
@@ -344,7 +335,7 @@ export function MovieEntryEditPanel({
               value={draftWatchedYear}
               disabled={pending}
               inputMode="numeric"
-              pattern="\\d{4}"
+              pattern="[0-9]{4}"
               maxLength={4}
               className="h-8 rounded-none border-[var(--border)] px-2 font-mono text-sm tabular-nums shadow-none"
               onChange={(event) =>

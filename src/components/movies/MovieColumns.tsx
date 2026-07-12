@@ -150,9 +150,10 @@ export function createMovieColumns({
         <Link
           href={`/movies/${row.original.id}`}
           className={cn(
-            "hover:underline",
+            "block max-w-[28rem] truncate hover:underline",
             status !== "watched" ? "font-light italic" : "font-medium",
           )}
+          title={row.original.title}
         >
           {row.getValue("title")}
         </Link>
