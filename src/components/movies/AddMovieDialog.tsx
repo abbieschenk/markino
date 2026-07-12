@@ -5,6 +5,7 @@ import { startTransition, useId, useRef, useState } from "react";
 
 import { addMovieEntry } from "@/app/movies/actions";
 import { DatePickerField } from "@/components/movies/DatePickerField";
+import { MovieTitleSearchField } from "@/components/movies/movie-title-search-field";
 import { WatchedWithCombobox } from "@/components/movies/WatchedWithCombobox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,6 +120,10 @@ export function AddMovieDialog({
     if (target?.closest("[data-slot='combobox-content']")) {
       event.preventDefault();
     }
+
+    if (target?.closest("[data-slot='movie-title-search-content']")) {
+      event.preventDefault();
+    }
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -169,7 +174,7 @@ export function AddMovieDialog({
       </DialogTrigger>
       <DialogContent
         showCloseButton={false}
-        className="w-[min(96vw,72rem)] max-w-none overflow-hidden rounded-none border border-[var(--border)] bg-[var(--background)] p-0 text-[var(--foreground)] shadow-[0_24px_80px_rgba(0,0,0,0.18)] sm:max-w-none"
+        className="w-[min(96vw,72rem)] max-w-none overflow-visible rounded-none border border-[var(--border)] bg-[var(--background)] p-0 text-[var(--foreground)] shadow-[0_24px_80px_rgba(0,0,0,0.18)] sm:max-w-none"
         onFocusOutside={preventComboboxOutsideDismiss}
         onInteractOutside={preventComboboxOutsideDismiss}
         onPointerDownOutside={preventComboboxOutsideDismiss}
@@ -218,11 +223,13 @@ export function AddMovieDialog({
                       >
                         Title
                       </label>
-                      <Input
+                      <MovieTitleSearchField
                         id={titleInputId}
-                        name={`title:${row.id}`}
+                        titleName={`title:${row.id}`}
+                        tmdbIdName={`tmdbId:${row.id}`}
+                        portalContainer={comboboxLayerElement}
                         required
-                        aria-label={`Row ${index + 1} title`}
+                        ariaLabel={`Row ${index + 1} title`}
                       />
                     </div>
                     <div className="grid gap-1.5">

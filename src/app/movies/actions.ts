@@ -46,6 +46,7 @@ type UpdateMovieEntryInput = {
 };
 type MovieEntryInput = {
   title: string;
+  tmdbId: number | null;
   watchedOn: string;
   languageWatched: string;
   rawStatus: string;
@@ -54,6 +55,7 @@ type MovieEntryInput = {
 type TmdbSearchResult =
   | { status: "success"; message: null; matches: TmdbMovieMatch[] }
   | { status: "error"; message: string; matches: [] };
+type MovieWriteTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 function parseWatchStatus(value: string): WatchStatusValue | null {
   if (!VALID_STATUSES.has(value as WatchStatusValue)) {
@@ -109,6 +111,7 @@ function parseMovieEntryInputs(formData: FormData): MovieEntryInput[] {
     return [
       {
         title: String(formData.get("title") ?? "").trim(),
+        tmdbId: parseTmdbId(formData.get("tmdbId")),
         watchedOn: String(formData.get("watchedOn") ?? "").trim(),
         languageWatched:
           String(formData.get("languageWatched") ?? "").trim() || "English",
@@ -122,6 +125,7 @@ function parseMovieEntryInputs(formData: FormData): MovieEntryInput[] {
 
   return Array.from(new Set(rowIds)).map((rowId) => ({
     title: String(formData.get(`title:${rowId}`) ?? "").trim(),
+    tmdbId: parseTmdbId(formData.get(`tmdbId:${rowId}`)),
     watchedOn: String(formData.get(`watchedOn:${rowId}`) ?? "").trim(),
     languageWatched:
       String(formData.get(`languageWatched:${rowId}`) ?? "").trim() ||
@@ -131,6 +135,12 @@ function parseMovieEntryInputs(formData: FormData): MovieEntryInput[] {
       .toLowerCase(),
     watchedWithHandles: getUniqueHandles(formData.getAll(`watchedWith:${rowId}`)),
   }));
+}
+
+function parseTmdbId(value: FormDataEntryValue | null) {
+  const tmdbId = Number(String(value ?? "").trim());
+
+  return Number.isInteger(tmdbId) && tmdbId > 0 ? tmdbId : null;
 }
 
 async function requireSuperadmin() {
@@ -202,6 +212,229 @@ function deriveCreditSummaries(credits: TmdbMovieDetails["credits"]) {
         .map((credit) => credit.name),
     ),
   };
+}
+
+async function writeMovieMetadata(
+  tx: MovieWriteTransaction,
+  movieId: string,
+  details: TmdbMovieDetails,
+) {
+  const creditSummaries = deriveCreditSummaries(details.credits);
+
+  await tx.delete(movieCredits).where(eq(movieCredits.movieId, movieId));
+  await tx.delete(movieGenres).where(eq(movieGenres.movieId, movieId));
+  await tx
+    .delete(movieProductionCountries)
+    .where(eq(movieProductionCountries.movieId, movieId));
+  await tx
+    .delete(movieSpokenLanguages)
+    .where(eq(movieSpokenLanguages.movieId, movieId));
+  await tx.delete(movieStudios).where(eq(movieStudios.movieId, movieId));
+
+  await tx
+    .update(movies)
+    .set({
+      title: details.title,
+      originalTitle: details.originalTitle,
+      overview: details.overview,
+      releaseYear: details.releaseYear,
+      releaseDate: details.releaseDate,
+      runtimeMinutes: details.runtimeMinutes,
+      originalLanguage: details.originalLanguage,
+      originCountries: details.originCountries,
+      tmdbId: details.id,
+      imdbId: details.imdbId,
+      posterPath: details.posterPath,
+      tagline: details.tagline,
+      budget: details.budget,
+      revenue: details.revenue,
+      director: creditSummaries.director,
+      writer: creditSummaries.writer,
+      editor: creditSummaries.editor,
+      metadataSyncedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(movies.id, movieId));
+
+  if (details.genres.length > 0) {
+    const syncedGenres = await tx
+      .insert(genres)
+      .values(details.genres)
+      .onConflictDoUpdate({
+        target: genres.tmdbGenreId,
+        set: {
+          name: sql`excluded.name`,
+        },
+      })
+      .returning({
+        id: genres.id,
+        tmdbGenreId: genres.tmdbGenreId,
+      });
+    const genreIdsByTmdbId = new Map(
+      syncedGenres.map((genre) => [genre.tmdbGenreId, genre.id]),
+    );
+
+    await tx.insert(movieGenres).values(
+      details.genres
+        .map((genre) => {
+          const genreId = genreIdsByTmdbId.get(genre.tmdbGenreId);
+
+          return genreId ? { movieId, genreId } : null;
+        })
+        .filter((genre): genre is { movieId: string; genreId: string } =>
+          Boolean(genre),
+        ),
+    );
+  }
+
+  if (details.productionCountries.length > 0) {
+    await tx
+      .insert(productionCountries)
+      .values(details.productionCountries)
+      .onConflictDoUpdate({
+        target: productionCountries.isoCode,
+        set: {
+          name: sql`excluded.name`,
+        },
+      });
+    await tx.insert(movieProductionCountries).values(
+      details.productionCountries.map((country) => ({
+        movieId,
+        countryCode: country.isoCode,
+      })),
+    );
+  }
+
+  if (details.spokenLanguages.length > 0) {
+    await tx
+      .insert(spokenLanguages)
+      .values(details.spokenLanguages)
+      .onConflictDoUpdate({
+        target: spokenLanguages.isoCode,
+        set: {
+          name: sql`excluded.name`,
+        },
+      });
+    await tx.insert(movieSpokenLanguages).values(
+      details.spokenLanguages.map((language) => ({
+        movieId,
+        languageCode: language.isoCode,
+      })),
+    );
+  }
+
+  if (details.studios.length > 0) {
+    const syncedStudios = await tx
+      .insert(studios)
+      .values(details.studios)
+      .onConflictDoUpdate({
+        target: studios.tmdbCompanyId,
+        set: {
+          name: sql`excluded.name`,
+          originCountry: sql`excluded.origin_country`,
+        },
+      })
+      .returning({
+        id: studios.id,
+        tmdbCompanyId: studios.tmdbCompanyId,
+      });
+    const studioIdsByTmdbId = new Map(
+      syncedStudios.map((studio) => [studio.tmdbCompanyId, studio.id]),
+    );
+
+    await tx.insert(movieStudios).values(
+      details.studios
+        .map((studio) => {
+          const studioId = studioIdsByTmdbId.get(studio.tmdbCompanyId);
+
+          return studioId ? { movieId, studioId } : null;
+        })
+        .filter((studio): studio is { movieId: string; studioId: string } =>
+          Boolean(studio),
+        ),
+    );
+  }
+
+  const peopleByTmdbId = new Map<
+    number,
+    { tmdbPersonId: number; name: string }
+  >();
+
+  for (const credit of details.credits.cast) {
+    peopleByTmdbId.set(credit.tmdbPersonId, {
+      tmdbPersonId: credit.tmdbPersonId,
+      name: credit.name,
+    });
+  }
+
+  for (const credit of details.credits.crew) {
+    peopleByTmdbId.set(credit.tmdbPersonId, {
+      tmdbPersonId: credit.tmdbPersonId,
+      name: credit.name,
+    });
+  }
+
+  if (peopleByTmdbId.size > 0) {
+    const syncedPeople = await tx
+      .insert(people)
+      .values(Array.from(peopleByTmdbId.values()))
+      .onConflictDoUpdate({
+        target: people.tmdbPersonId,
+        set: {
+          name: sql`excluded.name`,
+        },
+      })
+      .returning({
+        id: people.id,
+        tmdbPersonId: people.tmdbPersonId,
+      });
+    const personIdsByTmdbId = new Map(
+      syncedPeople.map((person) => [person.tmdbPersonId, person.id]),
+    );
+    const castCreditRows = details.credits.cast
+      .map((credit) => {
+        const personId = personIdsByTmdbId.get(credit.tmdbPersonId);
+
+        return personId
+          ? {
+              movieId,
+              personId,
+              creditType: "cast" as const,
+              department: null,
+              job: null,
+              character: credit.character,
+              creditOrder: credit.order,
+            }
+          : null;
+      })
+      .filter((credit): credit is NonNullable<typeof credit> =>
+        Boolean(credit),
+      );
+    const crewCreditRows = details.credits.crew
+      .map((credit) => {
+        const personId = personIdsByTmdbId.get(credit.tmdbPersonId);
+
+        return personId
+          ? {
+              movieId,
+              personId,
+              creditType: "crew" as const,
+              department: credit.department,
+              job: credit.job,
+              character: null,
+              creditOrder: null,
+            }
+          : null;
+      })
+      .filter((credit): credit is NonNullable<typeof credit> =>
+        Boolean(credit),
+      );
+    const creditRows = [...castCreditRows, ...crewCreditRows];
+
+    if (creditRows.length > 0) {
+      await tx.insert(movieCredits).values(creditRows);
+    }
+  }
 }
 
 export async function addMovieEntry(
@@ -291,9 +524,27 @@ export async function addMovieEntry(
     };
   }
 
+  const tmdbDetailsById = new Map<number, TmdbMovieDetails>();
+
+  try {
+    for (const tmdbId of new Set(
+      entriesWithStatus
+        .map((entry) => entry.tmdbId)
+        .filter((tmdbId): tmdbId is number => tmdbId !== null),
+    )) {
+      tmdbDetailsById.set(tmdbId, await getTmdbMovieDetails(tmdbId));
+    }
+  } catch (error) {
+    return {
+      status: "error",
+      message: mapTmdbError(error, "Unable to load TMDB movie metadata."),
+    };
+  }
+
   try {
     await db.transaction(async (tx) => {
       const movieIdByNormalizedTitle = new Map<string, string>();
+      const movieIdByTmdbId = new Map<number, string>();
       const participantUserByHandle = new Map(
         participantUsers.map((user) => [user.handle, user]),
       );
@@ -304,15 +555,27 @@ export async function addMovieEntry(
         }
 
         const normalizedTitle = entry.title.toLocaleLowerCase();
-        let movieId = movieIdByNormalizedTitle.get(normalizedTitle);
+        const tmdbDetails = entry.tmdbId
+          ? tmdbDetailsById.get(entry.tmdbId)
+          : null;
+        let movieId = entry.tmdbId
+          ? movieIdByTmdbId.get(entry.tmdbId)
+          : movieIdByNormalizedTitle.get(normalizedTitle);
 
         if (!movieId) {
-          const existingMovie = await tx.query.movies.findFirst({
-            where: sql`lower(${movies.title}) = ${normalizedTitle}`,
-            columns: {
-              id: true,
-            },
-          });
+          const existingMovie = entry.tmdbId
+            ? await tx.query.movies.findFirst({
+                where: eq(movies.tmdbId, entry.tmdbId),
+                columns: {
+                  id: true,
+                },
+              })
+            : await tx.query.movies.findFirst({
+                where: sql`lower(${movies.title}) = ${normalizedTitle}`,
+                columns: {
+                  id: true,
+                },
+              });
 
           movieId =
             existingMovie?.id ??
@@ -320,12 +583,20 @@ export async function addMovieEntry(
               await tx
                 .insert(movies)
                 .values({
-                  title: entry.title,
+                  title: tmdbDetails?.title ?? entry.title,
                 })
                 .returning({ id: movies.id })
             )[0].id;
 
-          movieIdByNormalizedTitle.set(normalizedTitle, movieId);
+          if (entry.tmdbId) {
+            movieIdByTmdbId.set(entry.tmdbId, movieId);
+          } else {
+            movieIdByNormalizedTitle.set(normalizedTitle, movieId);
+          }
+        }
+
+        if (tmdbDetails) {
+          await writeMovieMetadata(tx, movieId, tmdbDetails);
         }
 
         const [watchEntry] = await tx
@@ -683,6 +954,48 @@ export async function searchTmdbMovieMatches(
   }
 }
 
+export async function searchTmdbMovieMatchesByTitle(
+  query: string,
+): Promise<TmdbSearchResult> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session?.user?.id) {
+    return {
+      status: "error",
+      message: "You must be signed in to search TMDB.",
+      matches: [],
+    };
+  }
+
+  const normalizedQuery = query.trim();
+
+  if (normalizedQuery.length < 2) {
+    return {
+      status: "success",
+      message: null,
+      matches: [],
+    };
+  }
+
+  try {
+    const matches = await searchTmdbMovies(normalizedQuery);
+
+    return {
+      status: "success",
+      message: null,
+      matches: matches.slice(0, 6),
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      message: mapTmdbError(error, "Unable to search TMDB."),
+      matches: [],
+    };
+  }
+}
+
 export async function syncMovieMetadata(
   movieId: string,
   tmdbId: number,
@@ -705,7 +1018,6 @@ export async function syncMovieMetadata(
 
   try {
     const details = await getTmdbMovieDetails(tmdbId);
-    const creditSummaries = deriveCreditSummaries(details.credits);
 
     await db.transaction(async (tx) => {
       const movie = await tx.query.movies.findFirst({
@@ -719,225 +1031,7 @@ export async function syncMovieMetadata(
         throw new Error("MOVIE_NOT_FOUND");
       }
 
-      await tx
-        .delete(movieCredits)
-        .where(eq(movieCredits.movieId, movieId));
-      await tx.delete(movieGenres).where(eq(movieGenres.movieId, movieId));
-      await tx
-        .delete(movieProductionCountries)
-        .where(eq(movieProductionCountries.movieId, movieId));
-      await tx
-        .delete(movieSpokenLanguages)
-        .where(eq(movieSpokenLanguages.movieId, movieId));
-      await tx.delete(movieStudios).where(eq(movieStudios.movieId, movieId));
-
-      await tx
-        .update(movies)
-        .set({
-          title: details.title,
-          originalTitle: details.originalTitle,
-          overview: details.overview,
-          releaseYear: details.releaseYear,
-          releaseDate: details.releaseDate,
-          runtimeMinutes: details.runtimeMinutes,
-          originalLanguage: details.originalLanguage,
-          originCountries: details.originCountries,
-          tmdbId: details.id,
-          imdbId: details.imdbId,
-          posterPath: details.posterPath,
-          tagline: details.tagline,
-          budget: details.budget,
-          revenue: details.revenue,
-          director: creditSummaries.director,
-          writer: creditSummaries.writer,
-          editor: creditSummaries.editor,
-          metadataSyncedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(eq(movies.id, movieId));
-
-      if (details.genres.length > 0) {
-        const syncedGenres = await tx
-          .insert(genres)
-          .values(details.genres)
-          .onConflictDoUpdate({
-            target: genres.tmdbGenreId,
-            set: {
-              name: sql`excluded.name`,
-            },
-          })
-          .returning({
-            id: genres.id,
-            tmdbGenreId: genres.tmdbGenreId,
-          });
-        const genreIdsByTmdbId = new Map(
-          syncedGenres.map((genre) => [genre.tmdbGenreId, genre.id]),
-        );
-
-        await tx.insert(movieGenres).values(
-          details.genres
-            .map((genre) => {
-              const genreId = genreIdsByTmdbId.get(genre.tmdbGenreId);
-
-              return genreId ? { movieId, genreId } : null;
-            })
-            .filter((genre): genre is { movieId: string; genreId: string } =>
-              Boolean(genre),
-            ),
-        );
-      }
-
-      if (details.productionCountries.length > 0) {
-        await tx
-          .insert(productionCountries)
-          .values(details.productionCountries)
-          .onConflictDoUpdate({
-            target: productionCountries.isoCode,
-            set: {
-              name: sql`excluded.name`,
-            },
-          });
-        await tx.insert(movieProductionCountries).values(
-          details.productionCountries.map((country) => ({
-            movieId,
-            countryCode: country.isoCode,
-          })),
-        );
-      }
-
-      if (details.spokenLanguages.length > 0) {
-        await tx
-          .insert(spokenLanguages)
-          .values(details.spokenLanguages)
-          .onConflictDoUpdate({
-            target: spokenLanguages.isoCode,
-            set: {
-              name: sql`excluded.name`,
-            },
-          });
-        await tx.insert(movieSpokenLanguages).values(
-          details.spokenLanguages.map((language) => ({
-            movieId,
-            languageCode: language.isoCode,
-          })),
-        );
-      }
-
-      let studioIdsByTmdbId = new Map<number, string>();
-
-      if (details.studios.length > 0) {
-        const syncedStudios = await tx
-          .insert(studios)
-          .values(details.studios)
-          .onConflictDoUpdate({
-            target: studios.tmdbCompanyId,
-            set: {
-              name: sql`excluded.name`,
-              originCountry: sql`excluded.origin_country`,
-            },
-          })
-          .returning({
-            id: studios.id,
-            tmdbCompanyId: studios.tmdbCompanyId,
-          });
-
-        studioIdsByTmdbId = new Map(
-          syncedStudios.map((studio) => [studio.tmdbCompanyId, studio.id]),
-        );
-
-        await tx.insert(movieStudios).values(
-          details.studios
-            .map((studio) => {
-              const studioId = studioIdsByTmdbId.get(studio.tmdbCompanyId);
-
-              return studioId ? { movieId, studioId } : null;
-            })
-            .filter((studio): studio is { movieId: string; studioId: string } =>
-              Boolean(studio),
-            ),
-        );
-      }
-
-      const peopleByTmdbId = new Map<
-        number,
-        { tmdbPersonId: number; name: string }
-      >();
-
-      for (const credit of details.credits.cast) {
-        peopleByTmdbId.set(credit.tmdbPersonId, {
-          tmdbPersonId: credit.tmdbPersonId,
-          name: credit.name,
-        });
-      }
-
-      for (const credit of details.credits.crew) {
-        peopleByTmdbId.set(credit.tmdbPersonId, {
-          tmdbPersonId: credit.tmdbPersonId,
-          name: credit.name,
-        });
-      }
-
-      if (peopleByTmdbId.size > 0) {
-        const syncedPeople = await tx
-          .insert(people)
-          .values(Array.from(peopleByTmdbId.values()))
-          .onConflictDoUpdate({
-            target: people.tmdbPersonId,
-            set: {
-              name: sql`excluded.name`,
-            },
-          })
-          .returning({
-            id: people.id,
-            tmdbPersonId: people.tmdbPersonId,
-          });
-        const personIdsByTmdbId = new Map(
-          syncedPeople.map((person) => [person.tmdbPersonId, person.id]),
-        );
-        const castCreditRows = details.credits.cast
-          .map((credit) => {
-            const personId = personIdsByTmdbId.get(credit.tmdbPersonId);
-
-            return personId
-              ? {
-                  movieId,
-                  personId,
-                  creditType: "cast" as const,
-                  department: null,
-                  job: null,
-                  character: credit.character,
-                  creditOrder: credit.order,
-                }
-              : null;
-          })
-          .filter((credit): credit is NonNullable<typeof credit> =>
-            Boolean(credit),
-          );
-        const crewCreditRows = details.credits.crew
-          .map((credit) => {
-            const personId = personIdsByTmdbId.get(credit.tmdbPersonId);
-
-            return personId
-              ? {
-                  movieId,
-                  personId,
-                  creditType: "crew" as const,
-                  department: credit.department,
-                  job: credit.job,
-                  character: null,
-                  creditOrder: null,
-                }
-              : null;
-          })
-          .filter((credit): credit is NonNullable<typeof credit> =>
-            Boolean(credit),
-          );
-        const creditRows = [...castCreditRows, ...crewCreditRows];
-
-        if (creditRows.length > 0) {
-          await tx.insert(movieCredits).values(creditRows);
-        }
-      }
+      await writeMovieMetadata(tx, movieId, details);
     });
   } catch (error) {
     if (error instanceof Error && error.message === "MOVIE_NOT_FOUND") {
