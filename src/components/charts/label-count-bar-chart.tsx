@@ -26,6 +26,7 @@ const chartConfig = {
 type LabelCountBarChartProps = {
   data: LabelCount[];
   emptyLabel: string;
+  scrollable?: boolean;
 };
 
 function truncateLabel(label: string) {
@@ -35,9 +36,11 @@ function truncateLabel(label: string) {
 export function LabelCountBarChart({
   data,
   emptyLabel,
+  scrollable = false,
 }: LabelCountBarChartProps) {
   const [pinnedTooltip, setPinnedTooltip] =
     useState<PinnedMovieListTooltip | null>(null);
+  const chartHeight = scrollable ? Math.max(300, data.length * 28) : 300;
 
   if (data.length === 0) {
     return (
@@ -49,62 +52,71 @@ export function LabelCountBarChart({
 
   return (
     <div className="relative">
-      <ChartContainer
-        config={chartConfig}
-        className="h-[300px] w-full aspect-auto"
+      <div
+        className={
+          scrollable
+            ? "h-[300px] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            : undefined
+        }
       >
-        <BarChart
-          data={data}
-          layout="vertical"
-          margin={{ top: 4, right: 28, left: 4, bottom: 0 }}
-          onClick={(chartState) => {
-            const index = getActiveChartDataIndex(chartState, data.length);
-
-            if (index == null) {
-              return;
-            }
-
-            const item = data[index];
-            setPinnedTooltip({
-              key: item.label,
-              title: item.label,
-              count: item.count,
-              movies: item.movies,
-            });
-          }}
+        <ChartContainer
+          config={chartConfig}
+          className="w-full aspect-auto"
+          style={{ height: chartHeight }}
         >
-          <CartesianGrid horizontal={false} strokeDasharray="2 4" />
-          <XAxis type="number" hide allowDecimals={false} />
-          <YAxis
-            dataKey="label"
-            type="category"
-            tickLine={false}
-            axisLine={false}
-            width={118}
-            tickFormatter={truncateLabel}
-          />
-          <ChartTooltip
-            active={pinnedTooltip ? false : undefined}
-            cursor={false}
-            isAnimationActive={false}
-            content={
-              <MovieListTooltip singularLabel="movie" pluralLabel="movies" />
-            }
-          />
-          <Bar
-            dataKey="count"
-            fill="var(--color-count)"
-            isAnimationActive={false}
-            radius={2}
+          <BarChart
+            data={data}
+            layout="vertical"
+            margin={{ top: 4, right: 28, left: 4, bottom: 0 }}
+            onClick={(chartState) => {
+              const index = getActiveChartDataIndex(chartState, data.length);
+
+              if (index == null) {
+                return;
+              }
+
+              const item = data[index];
+              setPinnedTooltip({
+                key: item.label,
+                title: item.label,
+                count: item.count,
+                movies: item.movies,
+              });
+            }}
           >
-            <LabelList
-              dataKey="count"
-              position="right"
-              className="fill-[var(--foreground)] text-xs tabular-nums"
+            <CartesianGrid horizontal={false} strokeDasharray="2 4" />
+            <XAxis type="number" hide allowDecimals={false} />
+            <YAxis
+              dataKey="label"
+              type="category"
+              tickLine={false}
+              axisLine={false}
+              width={118}
+              tickFormatter={truncateLabel}
             />
-          </Bar>
-        </BarChart>
-      </ChartContainer>
+            <ChartTooltip
+              active={pinnedTooltip ? false : undefined}
+              cursor={false}
+              isAnimationActive={false}
+              content={
+                <MovieListTooltip singularLabel="movie" pluralLabel="movies" />
+              }
+            />
+            <Bar
+              dataKey="count"
+              fill="var(--color-count)"
+              isAnimationActive={false}
+              radius={2}
+            >
+              <LabelList
+                dataKey="count"
+                position="right"
+                className="fill-[var(--foreground)] text-xs tabular-nums"
+              />
+            </Bar>
+          </BarChart>
+        </ChartContainer>
+      </div>
       <PinnedMovieListTooltipOverlay
         tooltip={pinnedTooltip}
         singularLabel="movie"

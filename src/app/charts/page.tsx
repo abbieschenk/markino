@@ -6,6 +6,7 @@ import { ChartPanel } from "@/components/charts/chart-panel";
 import { GenreOverTimeChart } from "@/components/charts/genre-over-time-chart";
 import { LabelCountBarChart } from "@/components/charts/label-count-bar-chart";
 import { ReleaseYearChart } from "@/components/charts/release-year-chart";
+import { WatchedByMonthChart } from "@/components/charts/watched-by-month-chart";
 import { WatchedOverTimeChart } from "@/components/charts/watched-over-time-chart";
 import { auth } from "@/lib/auth";
 import { getMovieChartStatsForUser } from "@/lib/movie-chart-stats";
@@ -42,35 +43,31 @@ export default async function ChartsPage() {
           />
         </ChartPanel>
 
+        <ChartPanel title="Watched by Month (%)">
+          <WatchedByMonthChart data={stats.watchedByMonth} />
+        </ChartPanel>
+
         <ChartPanel title="Release Years">
           <ReleaseYearChart data={stats.releaseYears} />
         </ChartPanel>
 
-        <ChartPanel title="Top Genres" eyebrow="Top 10">
-          <LabelCountBarChart
-            data={stats.topGenres}
-            emptyLabel="No genre metadata synced yet."
-          />
+        <ChartPanel title="Genres Over Time">
+          <GenreOverTimeChart yearlyData={stats.yearlyGenreOverTime} />
         </ChartPanel>
 
-        <ChartPanel title="Genres Over Time" eyebrow="Top 5 genres">
-          <GenreOverTimeChart
-            monthlyData={stats.monthlyGenreOverTime}
-            yearlyData={stats.yearlyGenreOverTime}
-          />
-        </ChartPanel>
-
-        <ChartPanel title="Top Directors" eyebrow="Top 10">
+        <ChartPanel title="Top Directors" eyebrow="Top 20">
           <LabelCountBarChart
             data={stats.topDirectors}
             emptyLabel="No director metadata synced yet."
+            scrollable
           />
         </ChartPanel>
 
-        <ChartPanel title="Top Actors" eyebrow="Top-billed cast, top 10">
+        <ChartPanel title="Top Actors" eyebrow="Top-billed cast, top 20">
           <LabelCountBarChart
             data={stats.topActors}
             emptyLabel="No cast metadata synced yet."
+            scrollable
           />
         </ChartPanel>
       </div>

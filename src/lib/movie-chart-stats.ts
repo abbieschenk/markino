@@ -29,6 +29,12 @@ export type LabelCount = {
   movies: string[];
 };
 
+export type WatchedByMonthCount = {
+  month: string;
+  label: string;
+  moviesByYear: Record<string, string[]>;
+} & Record<string, string | number | Record<string, string[]>>;
+
 export type GenreOverTimeCount = {
   month: string;
   label: string;
@@ -38,6 +44,7 @@ export type GenreOverTimeCount = {
 export type MovieChartStats = {
   monthlyWatched: MonthlyWatchedCount[];
   yearlyWatched: YearlyWatchedCount[];
+  watchedByMonth: WatchedByMonthCount[];
   yearOnlyWatchedOmittedFromMonthly: number;
   releaseYears: LabelCount[];
   topGenres: LabelCount[];
@@ -126,6 +133,62 @@ function getAllWatchedYears(watchedYears: Iterable<number>) {
       count: 0,
       movies: [],
     };
+  });
+}
+
+function getWatchedByMonth(
+  entries: Awaited<ReturnType<typeof getVisibleWatchEntriesForUser>>,
+) {
+  const monthFormatter = new Intl.DateTimeFormat("en", { month: "short" });
+  const exactDateEntries = entries.filter(
+    (entry) => entry.watchedDatePrecision === "day" && entry.watchedOn,
+  );
+  const watchedYears = Array.from(
+    new Set(exactDateEntries.map((entry) => entry.watchedOn.slice(0, 4))),
+  ).sort((left, right) => left.localeCompare(right));
+  const moviesByMonthAndYear = new Map<string, Map<string, MovieTooltipEntry[]>>(
+    Array.from({ length: 12 }, (_, index) => [
+      String(index + 1).padStart(2, "0"),
+      new Map(watchedYears.map((year) => [year, []])),
+    ]),
+  );
+
+  for (const entry of exactDateEntries) {
+    const year = entry.watchedOn.slice(0, 4);
+    const month = entry.watchedOn.slice(5, 7);
+    const moviesByYear = moviesByMonthAndYear.get(month);
+    const movies = moviesByYear?.get(year);
+
+    if (!movies) {
+      continue;
+    }
+
+    movies.push({
+      movieId: entry.movieId,
+      title: entry.movie.title,
+      watchedOn: entry.watchedOn,
+      watchedYear: getWatchedYear(entry.watchedOn),
+      watchedDatePrecision: entry.watchedDatePrecision,
+    });
+  }
+
+  return Array.from({ length: 12 }, (_, index) => {
+    const month = String(index + 1).padStart(2, "0");
+    const date = new Date(2000, index, 1);
+    const moviesByYear = moviesByMonthAndYear.get(month) ?? new Map();
+    const item: WatchedByMonthCount = {
+      month,
+      label: monthFormatter.format(date),
+      moviesByYear: {},
+    };
+
+    for (const year of watchedYears) {
+      const movies = sortMoviesByWatchedOn(moviesByYear.get(year) ?? []);
+      item[year] = movies.length;
+      item.moviesByYear[year] = movies;
+    }
+
+    return item;
   });
 }
 
@@ -301,7 +364,7 @@ async function getTopDirectors(
     }
   }
 
-  return toTopMovieCounts(movieIdsByDirector, movieTitleById, rankByMovieId);
+  return toTopMovieCounts(movieIdsByDirector, movieTitleById, rankByMovieId, 20);
 }
 
 async function getTopActors(
@@ -344,7 +407,7 @@ async function getTopActors(
     }
   }
 
-  return toTopMovieCounts(movieIdsByActor, movieTitleById, rankByMovieId);
+  return toTopMovieCounts(movieIdsByActor, movieTitleById, rankByMovieId, 20);
 }
 
 async function getGenreStats(
@@ -391,7 +454,7 @@ async function getGenreStats(
     movieTitleById,
     rankByMovieId,
   );
-  const timelineGenres = topGenres.slice(0, 5).map((genre) => genre.label);
+  const timelineGenres = topGenres.slice(0, 10).map((genre) => genre.label);
   const timelineGenreSet = new Set(timelineGenres);
 
   return {
@@ -601,6 +664,7 @@ export async function getMovieChartStatsForUser(
         movies,
       };
     }),
+    watchedByMonth: getWatchedByMonth(visibleEntries),
     yearOnlyWatchedOmittedFromMonthly: visibleEntries.filter(
       (entry) => entry.watchedDatePrecision === "year",
     ).length,
