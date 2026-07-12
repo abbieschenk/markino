@@ -77,10 +77,9 @@ function buildUpdateInput(
 ) {
   return {
     watchEntryId: entry.watchEntryId,
-    watchedOn: "watchedOn" in updates ? updates.watchedOn ?? "" : entry.watchedOn,
-    watchedDatePrecision: "watchedDatePrecision" in updates
-      ? updates.watchedDatePrecision ?? entry.watchedDatePrecision
-      : entry.watchedDatePrecision,
+    watchedOn: updates.watchedOn ?? entry.watchedOn,
+    watchedDatePrecision:
+      updates.watchedDatePrecision ?? entry.watchedDatePrecision,
     languageWatched: updates.language ?? entry.language,
     watchedWithHandles: updates.watchedWith ?? entry.watchedWith,
   };
