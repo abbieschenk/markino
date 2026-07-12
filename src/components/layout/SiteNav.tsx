@@ -24,8 +24,11 @@ export async function SiteNav() {
   return (
     <header className="sticky top-0 z-10 border-b border-[var(--border)] bg-[color:color-mix(in_srgb,var(--background)_92%,white)] backdrop-blur">
       <div className="flex min-h-14 items-center justify-between gap-4">
-        <Link href="/" className="text-sm font-medium tracking-[-0.02em]">
-          Markino
+        <Link
+          href="/"
+          className="select-none text-xl font-bold uppercase [font-family:Futura,'Futura_PT','Trebuchet_MS',sans-serif]"
+        >
+          MARKINO
         </Link>
         <div className="flex flex-wrap items-center gap-3">
           <nav className="flex flex-wrap items-center gap-1 text-sm text-[var(--muted-foreground)]">
