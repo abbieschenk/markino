@@ -129,6 +129,7 @@ async function getParticipantWatchEntries(userId: string) {
 }
 
 type HydratedWatchEntry = Awaited<ReturnType<typeof getOwnedWatchEntries>>[number];
+export type VisibleWatchEntry = HydratedWatchEntry;
 
 function getWatchedYear(entry: Pick<HydratedWatchEntry, "watchedOn">) {
   return Number(entry.watchedOn.slice(0, 4));
@@ -303,6 +304,13 @@ export async function getMovieLedgerForUser(
 ): Promise<MovieLedgerEntry[]> {
   const visibleEntries = await getVisibleWatchEntriesForUser(userId);
 
+  return getMovieLedgerFromVisibleEntries(userId, visibleEntries);
+}
+
+export async function getMovieLedgerFromVisibleEntries(
+  userId: string,
+  visibleEntries: VisibleWatchEntry[],
+): Promise<MovieLedgerEntry[]> {
   if (visibleEntries.length === 0) {
     return [];
   }

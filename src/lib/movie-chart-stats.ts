@@ -5,7 +5,7 @@ import { and, asc, eq, inArray, lte } from "drizzle-orm";
 import { db } from "@/db";
 import { genres, movieCredits, movieGenres, movies, people } from "@/db/schema";
 import {
-  getMovieLedgerForUser,
+  getMovieLedgerFromVisibleEntries,
   getVisibleWatchEntriesForUser,
 } from "@/lib/movies";
 
@@ -634,7 +634,10 @@ export async function getMovieChartStatsForUser(
   userId: string,
 ): Promise<MovieChartStats> {
   const visibleEntries = await getVisibleWatchEntriesForUser(userId);
-  const rankedLedger = await getMovieLedgerForUser(userId);
+  const rankedLedger = await getMovieLedgerFromVisibleEntries(
+    userId,
+    visibleEntries,
+  );
   const rankByMovieId = new Map(
     rankedLedger.map((entry) => [entry.movieId, entry.rank]),
   );
