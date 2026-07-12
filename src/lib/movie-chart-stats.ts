@@ -16,6 +16,13 @@ export type MonthlyWatchedCount = {
   movies: string[];
 };
 
+export type YearlyWatchedCount = {
+  year: string;
+  label: string;
+  count: number;
+  movies: string[];
+};
+
 export type LabelCount = {
   label: string;
   count: number;
@@ -30,9 +37,12 @@ export type GenreOverTimeCount = {
 
 export type MovieChartStats = {
   monthlyWatched: MonthlyWatchedCount[];
+  yearlyWatched: YearlyWatchedCount[];
+  yearOnlyWatchedOmittedFromMonthly: number;
   releaseYears: LabelCount[];
   topGenres: LabelCount[];
-  genreOverTime: GenreOverTimeCount[];
+  monthlyGenreOverTime: GenreOverTimeCount[];
+  yearlyGenreOverTime: GenreOverTimeCount[];
   topDirectors: LabelCount[];
   topActors: LabelCount[];
 };
@@ -40,7 +50,9 @@ export type MovieChartStats = {
 type MovieTooltipEntry = {
   movieId: string;
   title: string;
-  watchedOn?: string;
+  watchedOn?: string | null;
+  watchedYear?: number;
+  watchedDatePrecision?: "day" | "year";
 };
 
 function getMonthIndex(month: string) {
@@ -91,6 +103,28 @@ function getAllWatchedMonths(watchedOnDates: Iterable<string>) {
   });
 }
 
+function getAllWatchedYears(watchedYears: Iterable<number>) {
+  const years = Array.from(new Set(watchedYears));
+
+  if (years.length === 0) {
+    return [];
+  }
+
+  const firstYear = Math.min(...years);
+  const lastYear = Math.max(...years);
+
+  return Array.from({ length: lastYear - firstYear + 1 }, (_, index) => {
+    const year = String(firstYear + index).padStart(4, "0");
+
+    return {
+      year,
+      label: year,
+      count: 0,
+      movies: [],
+    };
+  });
+}
+
 function sortMoviesByRanking(
   movies: Iterable<MovieTooltipEntry>,
   rankByMovieId: Map<string, number>,
@@ -119,11 +153,26 @@ function sortMoviesByRanking(
 function sortMoviesByWatchedOn(movies: Iterable<MovieTooltipEntry>) {
   return Array.from(movies)
     .sort((left, right) => {
+      const leftWatchedYear = left.watchedYear ?? 0;
+      const rightWatchedYear = right.watchedYear ?? 0;
+
+      if (leftWatchedYear !== rightWatchedYear) {
+        return leftWatchedYear - rightWatchedYear;
+      }
+
       const leftWatchedOn = left.watchedOn ?? "";
       const rightWatchedOn = right.watchedOn ?? "";
 
       if (leftWatchedOn !== rightWatchedOn) {
         return leftWatchedOn.localeCompare(rightWatchedOn);
+      }
+
+      if (
+        left.watchedDatePrecision &&
+        right.watchedDatePrecision &&
+        left.watchedDatePrecision !== right.watchedDatePrecision
+      ) {
+        return left.watchedDatePrecision === "day" ? -1 : 1;
       }
 
       const titleSort = left.title.localeCompare(right.title, "en");
@@ -297,6 +346,7 @@ async function getTopActors(
 async function getGenreStats(
   visibleEntries: Awaited<ReturnType<typeof getVisibleWatchEntriesForUser>>,
   monthlyWatched: MonthlyWatchedCount[],
+  yearlyWatched: YearlyWatchedCount[],
   movieTitleById: Map<string, string>,
   rankByMovieId: Map<string, number>,
 ) {
@@ -307,7 +357,8 @@ async function getGenreStats(
   if (visibleMovieIds.length === 0) {
     return {
       topGenres: [],
-      genreOverTime: [],
+      monthlyGenreOverTime: [],
+      yearlyGenreOverTime: [],
     };
   }
 
@@ -338,19 +389,69 @@ async function getGenreStats(
   );
   const timelineGenres = topGenres.slice(0, 5).map((genre) => genre.label);
   const timelineGenreSet = new Set(timelineGenres);
-  const moviesByMonthAndGenre = new Map<string, Map<string, MovieTooltipEntry[]>>(
-    monthlyWatched.map((month) => [month.month, new Map()]),
-  );
 
-  for (const entry of visibleEntries) {
+  return {
+    topGenres,
+    monthlyGenreOverTime: buildGenreOverTime({
+      buckets: monthlyWatched.map((month) => ({
+        key: month.month,
+        label: month.label,
+      })),
+      entries: visibleEntries.filter(
+        (entry) => entry.watchedDatePrecision === "day" && entry.watchedOn,
+      ),
+      genresByMovieId,
+      timelineGenres,
+      timelineGenreSet,
+      getBucketKey: (entry) => entry.watchedOn?.slice(0, 7) ?? null,
+    }),
+    yearlyGenreOverTime: buildGenreOverTime({
+      buckets: yearlyWatched.map((year) => ({
+        key: year.year,
+        label: year.label,
+      })),
+      entries: visibleEntries,
+      genresByMovieId,
+      timelineGenres,
+      timelineGenreSet,
+      getBucketKey: (entry) => String(entry.watchedYear).padStart(4, "0"),
+    }),
+  };
+}
+
+function buildGenreOverTime({
+  buckets,
+  entries,
+  genresByMovieId,
+  timelineGenres,
+  timelineGenreSet,
+  getBucketKey,
+}: {
+  buckets: { key: string; label: string }[];
+  entries: Awaited<ReturnType<typeof getVisibleWatchEntriesForUser>>;
+  genresByMovieId: Map<string, Set<string>>;
+  timelineGenres: string[];
+  timelineGenreSet: Set<string>;
+  getBucketKey: (
+    entry: Awaited<ReturnType<typeof getVisibleWatchEntriesForUser>>[number],
+  ) => string | null;
+}) {
+  const moviesByBucketAndGenre = new Map<
+    string,
+    Map<string, MovieTooltipEntry[]>
+  >(buckets.map((bucket) => [bucket.key, new Map()]));
+
+  for (const entry of entries) {
     const entryGenres = genresByMovieId.get(entry.movieId);
 
     if (!entryGenres) {
       continue;
     }
 
-    const month = entry.watchedOn.slice(0, 7);
-    const moviesByGenre = moviesByMonthAndGenre.get(month);
+    const bucketKey = getBucketKey(entry);
+    const moviesByGenre = bucketKey
+      ? moviesByBucketAndGenre.get(bucketKey)
+      : null;
 
     if (!moviesByGenre) {
       continue;
@@ -366,16 +467,18 @@ async function getGenreStats(
         movieId: entry.movieId,
         title: entry.movie.title,
         watchedOn: entry.watchedOn,
+        watchedYear: entry.watchedYear,
+        watchedDatePrecision: entry.watchedDatePrecision,
       });
       moviesByGenre.set(genre, movies);
     }
   }
 
-  const genreOverTime = monthlyWatched.map((month) => {
-    const moviesByGenre = moviesByMonthAndGenre.get(month.month) ?? new Map();
+  return buckets.map((bucket) => {
+    const moviesByGenre = moviesByBucketAndGenre.get(bucket.key) ?? new Map();
     const item: GenreOverTimeCount = {
-      month: month.month,
-      label: month.label,
+      month: bucket.key,
+      label: bucket.label,
       moviesByGenre: {},
     };
 
@@ -387,11 +490,6 @@ async function getGenreStats(
 
     return item;
   });
-
-  return {
-    topGenres,
-    genreOverTime,
-  };
 }
 
 export async function getMovieChartStatsForUser(
@@ -402,23 +500,50 @@ export async function getMovieChartStatsForUser(
   const rankByMovieId = new Map(
     rankedLedger.map((entry) => [entry.movieId, entry.rank]),
   );
+  const exactDateEntries = visibleEntries.filter(
+    (entry) => entry.watchedDatePrecision === "day" && entry.watchedOn != null,
+  );
   const monthlyWatched = getAllWatchedMonths(
-    visibleEntries.map((entry) => entry.watchedOn),
+    exactDateEntries.map((entry) => entry.watchedOn as string),
+  );
+  const yearlyWatched = getAllWatchedYears(
+    visibleEntries.map((entry) => entry.watchedYear),
   );
   const moviesByMonth = new Map<string, MovieTooltipEntry[]>(
     monthlyWatched.map((month) => [month.month, []]),
   );
+  const moviesByYear = new Map<string, MovieTooltipEntry[]>(
+    yearlyWatched.map((year) => [year.year, []]),
+  );
   const movieIdsByReleaseYear = new Map<string, Set<string>>();
 
   for (const entry of visibleEntries) {
-    const month = entry.watchedOn.slice(0, 7);
-    const monthMovies = moviesByMonth.get(month);
+    if (entry.watchedDatePrecision === "day" && entry.watchedOn) {
+      const month = entry.watchedOn.slice(0, 7);
+      const monthMovies = moviesByMonth.get(month);
 
-    if (monthMovies) {
-      monthMovies.push({
+      if (monthMovies) {
+        monthMovies.push({
+          movieId: entry.movieId,
+          title: entry.movie.title,
+          watchedOn: entry.watchedOn,
+          watchedYear: entry.watchedYear,
+          watchedDatePrecision: entry.watchedDatePrecision,
+        });
+      }
+    }
+
+    const yearMovies = moviesByYear.get(
+      String(entry.watchedYear).padStart(4, "0"),
+    );
+
+    if (yearMovies) {
+      yearMovies.push({
         movieId: entry.movieId,
         title: entry.movie.title,
         watchedOn: entry.watchedOn,
+        watchedYear: entry.watchedYear,
+        watchedDatePrecision: entry.watchedDatePrecision,
       });
     }
 
@@ -437,11 +562,15 @@ export async function getMovieChartStatsForUser(
   const movieTitleById = new Map(
     visibleEntries.map((entry) => [entry.movieId, entry.movie.title]),
   );
-  const [{ topGenres, genreOverTime }, topDirectors, topActors] =
-    await Promise.all([
+  const [
+    { topGenres, monthlyGenreOverTime, yearlyGenreOverTime },
+    topDirectors,
+    topActors,
+  ] = await Promise.all([
       getGenreStats(
         visibleEntries,
         monthlyWatched,
+        yearlyWatched,
         movieTitleById,
         rankByMovieId,
       ),
@@ -459,6 +588,18 @@ export async function getMovieChartStatsForUser(
         movies,
       };
     }),
+    yearlyWatched: yearlyWatched.map((year) => {
+      const movies = sortMoviesByWatchedOn(moviesByYear.get(year.year) ?? []);
+
+      return {
+        ...year,
+        count: movies.length,
+        movies,
+      };
+    }),
+    yearOnlyWatchedOmittedFromMonthly: visibleEntries.filter(
+      (entry) => entry.watchedDatePrecision === "year",
+    ).length,
     releaseYears: Array.from(movieIdsByReleaseYear.entries())
       .map(([label, movieIds]) => ({
         label,
@@ -476,7 +617,8 @@ export async function getMovieChartStatsForUser(
       }))
       .sort((left, right) => Number(left.label) - Number(right.label)),
     topGenres,
-    genreOverTime,
+    monthlyGenreOverTime,
+    yearlyGenreOverTime,
     topDirectors,
     topActors,
   };

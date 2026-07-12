@@ -57,6 +57,13 @@
       "when": 1783776552111,
       "tag": "0007_married_black_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1783849702390,
+      "tag": "0008_absent_adam_warlock",
+      "breakpoints": true
     }
   ]
 }

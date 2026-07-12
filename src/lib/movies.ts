@@ -11,13 +11,17 @@ import {
 } from "@/db/schema";
 
 export type WatchStatus = "watched" | "dnf" | "dns";
+export type WatchDatePrecision = "day" | "year";
 
 export type MovieWatchEntry = {
   movieId: string;
   watchEntryId: string;
   canEdit: boolean;
   title: string;
-  watchedOn: string;
+  watchedOn: string | null;
+  watchedYear: number;
+  watchedDatePrecision: WatchDatePrecision;
+  watchedDateDisplay: string;
   language: string;
   status: WatchStatus;
   watchedWith: string[];
@@ -31,7 +35,10 @@ export type MovieLedgerEntry = {
   rank: number;
   title: string;
   isMetadataSynced: boolean;
-  watchedOn: string;
+  watchedOn: string | null;
+  watchedYear: number;
+  watchedDatePrecision: WatchDatePrecision;
+  watchedDateDisplay: string;
   language: string;
   status: WatchStatus;
   watchedWith: string[];
@@ -123,13 +130,46 @@ async function getParticipantWatchEntries(userId: string) {
 
 type HydratedWatchEntry = Awaited<ReturnType<typeof getOwnedWatchEntries>>[number];
 
+function formatWatchDate(entry: Pick<HydratedWatchEntry, "watchedOn" | "watchedYear" | "watchedDatePrecision">) {
+  return entry.watchedDatePrecision === "year"
+    ? String(entry.watchedYear).padStart(4, "0")
+    : (entry.watchedOn ?? String(entry.watchedYear).padStart(4, "0"));
+}
+
+function compareWatchEntriesNewestFirst(
+  left: Pick<HydratedWatchEntry, "id" | "watchedOn" | "watchedYear" | "watchedDatePrecision">,
+  right: Pick<HydratedWatchEntry, "id" | "watchedOn" | "watchedYear" | "watchedDatePrecision">,
+) {
+  if (left.watchedYear !== right.watchedYear) {
+    return right.watchedYear - left.watchedYear;
+  }
+
+  if (left.watchedOn && right.watchedOn && left.watchedOn !== right.watchedOn) {
+    return right.watchedOn.localeCompare(left.watchedOn);
+  }
+
+  if (left.watchedDatePrecision !== right.watchedDatePrecision) {
+    return left.watchedDatePrecision === "day" ? -1 : 1;
+  }
+
+  return right.id.localeCompare(left.id, "en");
+}
+
 function sortLedgerEntries(left: MovieLedgerEntry, right: MovieLedgerEntry) {
   if (left.rank !== right.rank) {
     return left.rank - right.rank;
   }
 
-  if (left.watchedOn !== right.watchedOn) {
+  if (left.watchedYear !== right.watchedYear) {
+    return right.watchedYear - left.watchedYear;
+  }
+
+  if (left.watchedOn && right.watchedOn && left.watchedOn !== right.watchedOn) {
     return right.watchedOn.localeCompare(left.watchedOn);
+  }
+
+  if (left.watchedDatePrecision !== right.watchedDatePrecision) {
+    return left.watchedDatePrecision === "day" ? -1 : 1;
   }
 
   return left.title.localeCompare(right.title, "en");
@@ -139,11 +179,7 @@ function sortWatchEntriesNewestFirst(
   left: HydratedWatchEntry,
   right: HydratedWatchEntry,
 ) {
-  if (left.watchedOn !== right.watchedOn) {
-    return right.watchedOn.localeCompare(left.watchedOn);
-  }
-
-  return right.id.localeCompare(left.id, "en");
+  return compareWatchEntriesNewestFirst(left, right);
 }
 
 function mapWatchedWithHandles(entry: HydratedWatchEntry, userId: string) {
@@ -172,6 +208,9 @@ function mapWatchEntry(
     canEdit: entry.userId === userId,
     title: entry.movie.title,
     watchedOn: entry.watchedOn,
+    watchedYear: entry.watchedYear,
+    watchedDatePrecision: entry.watchedDatePrecision,
+    watchedDateDisplay: formatWatchDate(entry),
     language: entry.languageWatched,
     status: entry.status,
     watchedWith: mapWatchedWithHandles(entry, userId),
@@ -197,6 +236,9 @@ function mapLedgerEntry(
     title: entry.movie.title,
     isMetadataSynced: entry.movie.tmdbId != null,
     watchedOn: entry.watchedOn,
+    watchedYear: entry.watchedYear,
+    watchedDatePrecision: entry.watchedDatePrecision,
+    watchedDateDisplay: formatWatchDate(entry),
     language: entry.languageWatched,
     status: entry.status,
     watchedWith: mapWatchedWithHandles(entry, userId),
@@ -211,7 +253,7 @@ function selectLedgerEntriesByMovie(entries: HydratedWatchEntry[]) {
   for (const entry of entries) {
     const currentEntry = entriesByMovieId.get(entry.movieId);
 
-    if (!currentEntry || entry.watchedOn > currentEntry.watchedOn) {
+    if (!currentEntry || compareWatchEntriesNewestFirst(entry, currentEntry) < 0) {
       entriesByMovieId.set(entry.movieId, entry);
     }
   }
@@ -300,8 +342,10 @@ export async function getMovieLedgerForUser(
       return 1;
     }
 
-    if (left.watchedOn !== right.watchedOn) {
-      return right.watchedOn.localeCompare(left.watchedOn);
+    const watchedDateSort = compareWatchEntriesNewestFirst(left, right);
+
+    if (watchedDateSort !== 0) {
+      return watchedDateSort;
     }
 
     return left.movie.title.localeCompare(right.movie.title, "en");

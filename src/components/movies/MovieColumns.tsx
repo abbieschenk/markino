@@ -73,6 +73,22 @@ function getSortButtonClassName(column: Column<MovieLedgerEntry>) {
   );
 }
 
+function compareWatchedDates(left: MovieLedgerEntry, right: MovieLedgerEntry) {
+  if (left.watchedYear !== right.watchedYear) {
+    return left.watchedYear - right.watchedYear;
+  }
+
+  if (left.watchedOn && right.watchedOn && left.watchedOn !== right.watchedOn) {
+    return left.watchedOn.localeCompare(right.watchedOn);
+  }
+
+  if (left.watchedDatePrecision !== right.watchedDatePrecision) {
+    return left.watchedDatePrecision === "day" ? -1 : 1;
+  }
+
+  return left.title.localeCompare(right.title, "en");
+}
+
 type MovieColumnsOptions = {
   activeEditTarget: MovieEntryEditTarget | null;
   canSyncMetadata: boolean;
@@ -144,7 +160,8 @@ export function createMovieColumns({
     },
   },
   {
-    accessorKey: "watchedOn",
+    id: "watchedOn",
+    accessorKey: "watchedDateDisplay",
     header: ({ column }) => (
       <Button
         variant="ghost"
@@ -162,9 +179,11 @@ export function createMovieColumns({
         field="watchedOn"
         isActive={isActiveEditTarget(row.original, "watchedOn")}
         onEdit={onEdit}
-        value={row.original.watchedOn}
+        value={row.original.watchedDateDisplay}
       />
     ),
+    sortingFn: (left, right) =>
+      compareWatchedDates(left.original, right.original),
   },
   {
     accessorKey: "language",

@@ -43,9 +43,13 @@ const STATUS_OPTIONS = [
 ] as const;
 
 type StatusValue = (typeof STATUS_OPTIONS)[number]["value"];
+type DatePrecisionValue = "day" | "year";
 type MovieFormRow = {
   id: string;
   status: StatusValue;
+  watchedDatePrecision: DatePrecisionValue;
+  watchedOn: string;
+  watchedYear: string;
   watchedWith: string[];
 };
 
@@ -56,7 +60,27 @@ function createMovieFormRow(
   return {
     id: String(id),
     status: "watched",
+    watchedDatePrecision: "day",
+    watchedOn: "",
+    watchedYear: "",
     watchedWith: defaultWatchedWith,
+  };
+}
+
+function formatYearDigits(value: string) {
+  return value.replace(/\D/g, "").slice(0, 4);
+}
+
+function createMovieFormRowFromPrevious(
+  id: number,
+  previousRow: MovieFormRow | undefined,
+  defaultWatchedWith: string[],
+): MovieFormRow {
+  return {
+    ...createMovieFormRow(id, defaultWatchedWith),
+    watchedDatePrecision: previousRow?.watchedDatePrecision ?? "day",
+    watchedOn: previousRow?.watchedOn ?? "",
+    watchedYear: previousRow?.watchedYear ?? "",
   };
 }
 
@@ -87,10 +111,18 @@ export function AddMovieDialog({
   }
 
   function addRow() {
-    setRows((currentRows) => [
-      ...currentRows,
-      createMovieFormRow(nextRowIdRef.current++, defaultWatchedWith),
-    ]);
+    setRows((currentRows) => {
+      const previousRow = currentRows.at(-1);
+
+      return [
+        ...currentRows,
+        createMovieFormRowFromPrevious(
+          nextRowIdRef.current++,
+          previousRow,
+          defaultWatchedWith,
+        ),
+      ];
+    });
   }
 
   function removeRow(rowId: string) {
@@ -190,17 +222,17 @@ export function AddMovieDialog({
           className="grid min-w-0 gap-0"
         >
           <DialogHeader className="border-b border-[var(--border)] px-4 py-3">
-            <DialogTitle className="text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--muted-foreground)]">
+            <DialogTitle className="select-none text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--muted-foreground)]">
               Add Movie
             </DialogTitle>
           </DialogHeader>
           <div className="grid min-w-0 gap-3 overflow-x-auto px-4 py-4">
-            <div className="hidden grid-cols-[minmax(12rem,1.5fr)_10.5rem_minmax(8rem,0.8fr)_8rem_minmax(13rem,1.2fr)_2.25rem] gap-2 text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--muted-foreground)] lg:grid">
-              <span>Title</span>
-              <span>Date Watched</span>
-              <span>Language</span>
-              <span>Status</span>
-              <span>Watched With</span>
+            <div className="hidden grid-cols-[minmax(12rem,1.5fr)_14.5rem_minmax(8rem,0.8fr)_8rem_minmax(13rem,1.2fr)_2.25rem] gap-2 text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--muted-foreground)] lg:grid">
+              <span className="select-none">Title</span>
+              <span className="select-none">Date Watched</span>
+              <span className="select-none">Language</span>
+              <span className="select-none">Status</span>
+              <span className="select-none">Watched With</span>
               <span />
             </div>
             <div className="grid gap-2">
@@ -213,7 +245,7 @@ export function AddMovieDialog({
                 return (
                   <div
                     key={row.id}
-                    className="grid gap-2 border-b border-[var(--border)] pb-3 last:border-b-0 last:pb-0 lg:grid-cols-[minmax(12rem,1.5fr)_10.5rem_minmax(8rem,0.8fr)_8rem_minmax(13rem,1.2fr)_2.25rem] lg:items-start lg:border-b-0 lg:pb-0"
+                    className="grid gap-2 border-b border-[var(--border)] pb-3 last:border-b-0 last:pb-0 lg:grid-cols-[minmax(12rem,1.5fr)_14.5rem_minmax(8rem,0.8fr)_8rem_minmax(13rem,1.2fr)_2.25rem] lg:items-start lg:border-b-0 lg:pb-0"
                   >
                     <input type="hidden" name="movieRowId" value={row.id} />
                     <div className="grid gap-1.5">
@@ -239,11 +271,64 @@ export function AddMovieDialog({
                       >
                         Date Watched
                       </label>
-                      <DatePickerField
-                        id={watchedOnId}
-                        name={`watchedOn:${row.id}`}
-                        required
-                      />
+                      <div className="grid grid-cols-[5.25rem_1fr]">
+                        <input
+                          type="hidden"
+                          name={`watchedDatePrecision:${row.id}`}
+                          value={row.watchedDatePrecision}
+                        />
+                        <Select
+                          value={row.watchedDatePrecision}
+                          onValueChange={(value) =>
+                            updateRow(row.id, {
+                              watchedDatePrecision: value as DatePrecisionValue,
+                            })
+                          }
+                        >
+                          <SelectTrigger
+                            aria-label={`Row ${index + 1} date precision`}
+                            className="h-9 w-full rounded-none border-r-0 border-[var(--border)] bg-[var(--background)] px-2 shadow-none data-[size=default]:h-9"
+                          >
+                            <SelectValue placeholder="Date" />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-none border-[var(--border)]">
+                            <SelectItem value="day">Date</SelectItem>
+                            <SelectItem value="year">Year</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {row.watchedDatePrecision === "day" ? (
+                          <DatePickerField
+                            id={watchedOnId}
+                            name={`watchedOn:${row.id}`}
+                            value={row.watchedOn}
+                            onValueChange={(watchedOn) =>
+                              updateRow(row.id, { watchedOn })
+                            }
+                            required
+                          />
+                        ) : (
+                          <Input
+                            id={watchedOnId}
+                            name={`watchedYear:${row.id}`}
+                            value={row.watchedYear}
+                            placeholder="YYYY"
+                            inputMode="numeric"
+                            pattern="\\d{4}"
+                            maxLength={4}
+                            required
+                            autoComplete="off"
+                            aria-label={`Row ${index + 1} watched year`}
+                            className="h-9 rounded-none border-[var(--border)] px-2 font-mono tabular-nums shadow-none"
+                            onChange={(event) =>
+                              updateRow(row.id, {
+                                watchedYear: formatYearDigits(
+                                  event.currentTarget.value,
+                                ),
+                              })
+                            }
+                          />
+                        )}
+                      </div>
                     </div>
                     <div className="grid gap-1.5">
                       <label
@@ -276,7 +361,7 @@ export function AddMovieDialog({
                       >
                         <SelectTrigger
                           aria-label={`Row ${index + 1} status`}
-                          className="h-9 rounded-none border-[var(--border)] bg-[var(--background)] px-3 shadow-none"
+                          className="h-9 rounded-none border-[var(--border)] bg-[var(--background)] px-3 shadow-none data-[size=default]:h-9"
                         >
                           <SelectValue placeholder="Status" />
                         </SelectTrigger>
@@ -341,7 +426,7 @@ export function AddMovieDialog({
               onClick={addRow}
             >
               <Plus className="size-4" weight="regular" />
-              Add Line
+              Add Movie
             </Button>
             <div className="flex justify-end gap-2">
               <Button

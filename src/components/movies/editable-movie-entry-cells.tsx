@@ -11,13 +11,32 @@ import { DatePickerField } from "@/components/movies/DatePickerField";
 import { WatchedWithCombobox } from "@/components/movies/WatchedWithCombobox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { MovieLedgerEntry, MovieWatchEntry } from "@/lib/movies";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type {
+  MovieLedgerEntry,
+  MovieWatchEntry,
+  WatchDatePrecision,
+} from "@/lib/movies";
 import { cn } from "@/lib/utils";
 
 export type EditableMovieEntryField = "watchedOn" | "language" | "watchedWith";
 export type EditableMovieEntry = Pick<
   MovieLedgerEntry | MovieWatchEntry,
-  "watchEntryId" | "canEdit" | "title" | "watchedOn" | "language" | "watchedWith"
+  | "watchEntryId"
+  | "canEdit"
+  | "title"
+  | "watchedOn"
+  | "watchedYear"
+  | "watchedDatePrecision"
+  | "watchedDateDisplay"
+  | "language"
+  | "watchedWith"
 >;
 
 export type MovieEntryEditTarget = {
@@ -50,12 +69,24 @@ function getEditPanelAnchor(
 function buildUpdateInput(
   entry: EditableMovieEntry,
   updates: Partial<
-    Pick<MovieLedgerEntry, "watchedOn" | "language" | "watchedWith">
+    Pick<
+      MovieLedgerEntry,
+      | "watchedOn"
+      | "watchedYear"
+      | "watchedDatePrecision"
+      | "language"
+      | "watchedWith"
+    >
   >,
 ) {
   return {
     watchEntryId: entry.watchEntryId,
-    watchedOn: updates.watchedOn ?? entry.watchedOn,
+    watchedOn: "watchedOn" in updates ? updates.watchedOn ?? null : entry.watchedOn,
+    watchedYear:
+      "watchedYear" in updates ? updates.watchedYear ?? entry.watchedYear : entry.watchedYear,
+    watchedDatePrecision: "watchedDatePrecision" in updates
+      ? updates.watchedDatePrecision ?? entry.watchedDatePrecision
+      : entry.watchedDatePrecision,
     languageWatched: updates.language ?? entry.language,
     watchedWithHandles: updates.watchedWith ?? entry.watchedWith,
   };
@@ -75,6 +106,10 @@ function stopEditingKeyDown(
     event.preventDefault();
     onCancel();
   }
+}
+
+function formatYearDigits(value: string) {
+  return value.replace(/\D/g, "").slice(0, 4);
 }
 
 export function EditableMovieEntryCellButton({
@@ -174,9 +209,15 @@ export function MovieEntryEditPanel({
 }) {
   const router = useRouter();
   const fieldId = useId();
-  const [draftText, setDraftText] = useState(
-    target.field === "language" ? target.entry.language : target.entry.watchedOn,
+  const [draftText, setDraftText] = useState(target.entry.language);
+  const [draftWatchedOn, setDraftWatchedOn] = useState(
+    target.entry.watchedOn ?? "",
   );
+  const [draftWatchedYear, setDraftWatchedYear] = useState(
+    String(target.entry.watchedYear).padStart(4, "0"),
+  );
+  const [draftDatePrecision, setDraftDatePrecision] =
+    useState<WatchDatePrecision>(target.entry.watchedDatePrecision);
   const [draftWatchedWith, setDraftWatchedWith] = useState<string[]>(
     target.entry.watchedWith,
   );
@@ -186,13 +227,21 @@ export function MovieEntryEditPanel({
     const nextTextValue = draftText.trim();
     const currentWatchedWith = [...target.entry.watchedWith].sort().join("\n");
     const nextWatchedWith = [...draftWatchedWith].sort().join("\n");
+    const nextWatchedOn =
+      draftDatePrecision === "day" ? draftWatchedOn.trim() : null;
+    const nextWatchedYearText =
+      draftDatePrecision === "day"
+        ? draftWatchedOn.trim().slice(0, 4)
+        : draftWatchedYear.trim();
+    const nextWatchedYear = Number(nextWatchedYearText);
     const hasChanged =
       target.field === "watchedWith"
         ? nextWatchedWith !== currentWatchedWith
-        : nextTextValue !==
-          (target.field === "language"
-            ? target.entry.language
-            : target.entry.watchedOn);
+        : target.field === "language"
+          ? nextTextValue !== target.entry.language
+          : nextWatchedOn !== target.entry.watchedOn ||
+            nextWatchedYear !== target.entry.watchedYear ||
+            draftDatePrecision !== target.entry.watchedDatePrecision;
 
     if (!hasChanged) {
       onCancel();
@@ -206,7 +255,11 @@ export function MovieEntryEditPanel({
         const result = await updateMovieEntry(
           buildUpdateInput(target.entry, {
             language: target.field === "language" ? nextTextValue : undefined,
-            watchedOn: target.field === "watchedOn" ? nextTextValue : undefined,
+            watchedOn: target.field === "watchedOn" ? nextWatchedOn : undefined,
+            watchedYear:
+              target.field === "watchedOn" ? nextWatchedYear : undefined,
+            watchedDatePrecision:
+              target.field === "watchedOn" ? draftDatePrecision : undefined,
             watchedWith:
               target.field === "watchedWith" ? draftWatchedWith : undefined,
           }),
@@ -252,16 +305,57 @@ export function MovieEntryEditPanel({
         <div className="truncate text-sm font-medium">{target.entry.title}</div>
       </div>
       {target.field === "watchedOn" ? (
-        <DatePickerField
-          id={fieldId}
-          name={`${fieldId}-watched-on`}
-          autoFocus
-          disabled={pending}
-          value={draftText}
-          onValueChange={setDraftText}
-          onKeyDown={(event) => stopEditingKeyDown(event, saveEdit, cancelEdit)}
-          inputClassName="h-8 rounded-none border-r-0 border-[var(--border)] px-2 font-mono text-sm tabular-nums shadow-none"
-        />
+        <div className="grid grid-cols-[5.25rem_1fr]">
+          <Select
+            value={draftDatePrecision}
+            onValueChange={(value) =>
+              setDraftDatePrecision(value as WatchDatePrecision)
+            }
+            disabled={pending}
+          >
+            <SelectTrigger
+              aria-label="Date precision"
+              className="h-8 w-full rounded-none border-r-0 border-[var(--border)] bg-[var(--background)] px-2 text-sm shadow-none data-[size=default]:h-8"
+            >
+              <SelectValue placeholder="Date" />
+            </SelectTrigger>
+            <SelectContent className="rounded-none border-[var(--border)]">
+              <SelectItem value="day">Date</SelectItem>
+              <SelectItem value="year">Year</SelectItem>
+            </SelectContent>
+          </Select>
+          {draftDatePrecision === "day" ? (
+            <DatePickerField
+              id={fieldId}
+              name={`${fieldId}-watched-on`}
+              autoFocus
+              disabled={pending}
+              value={draftWatchedOn}
+              onValueChange={setDraftWatchedOn}
+              onKeyDown={(event) =>
+                stopEditingKeyDown(event, saveEdit, cancelEdit)
+              }
+              inputClassName="h-8 rounded-none border-r-0 border-[var(--border)] px-2 font-mono text-sm tabular-nums shadow-none"
+            />
+          ) : (
+            <Input
+              id={fieldId}
+              autoFocus
+              value={draftWatchedYear}
+              disabled={pending}
+              inputMode="numeric"
+              pattern="\\d{4}"
+              maxLength={4}
+              className="h-8 rounded-none border-[var(--border)] px-2 font-mono text-sm tabular-nums shadow-none"
+              onChange={(event) =>
+                setDraftWatchedYear(formatYearDigits(event.target.value))
+              }
+              onKeyDown={(event) =>
+                stopEditingKeyDown(event, saveEdit, cancelEdit)
+              }
+            />
+          )}
+        </div>
       ) : target.field === "language" ? (
         <Input
           autoFocus

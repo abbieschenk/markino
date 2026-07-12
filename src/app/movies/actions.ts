@@ -33,25 +33,43 @@ import {
 } from "@/lib/tmdb";
 
 const VALID_STATUSES = new Set(["watched", "dnf", "dns"] as const);
+const VALID_DATE_PRECISIONS = new Set(["day", "year"] as const);
 type WatchStatusValue = "watched" | "dnf" | "dns";
+type WatchDatePrecisionValue = "day" | "year";
 type MovieActionResult = {
   status: "error" | "success";
   message: string | null;
 };
 type UpdateMovieEntryInput = {
   watchEntryId: string;
-  watchedOn: string;
+  watchedOn: string | null;
+  watchedYear: number;
+  watchedDatePrecision: WatchDatePrecisionValue;
   languageWatched: string;
   watchedWithHandles: string[];
 };
 type MovieEntryInput = {
   title: string;
   tmdbId: number | null;
-  watchedOn: string;
+  rawWatchedOn: string;
+  rawWatchedYear: string;
+  rawWatchedDatePrecision: string;
   languageWatched: string;
   rawStatus: string;
   watchedWithHandles: string[];
 };
+type ParsedWatchDateInput = {
+  watchedOn: string | null;
+  watchedYear: number;
+  watchedDatePrecision: WatchDatePrecisionValue;
+};
+type ParsedMovieEntryInput = Omit<
+  MovieEntryInput,
+  "rawWatchedOn" | "rawWatchedYear" | "rawWatchedDatePrecision" | "rawStatus"
+> &
+  ParsedWatchDateInput & {
+    status: WatchStatusValue | null;
+  };
 type TmdbSearchResult =
   | { status: "success"; message: null; matches: TmdbMovieMatch[] }
   | { status: "error"; message: string; matches: [] };
@@ -65,6 +83,14 @@ function parseWatchStatus(value: string): WatchStatusValue | null {
   return value as WatchStatusValue;
 }
 
+function parseWatchDatePrecision(value: string): WatchDatePrecisionValue | null {
+  if (!VALID_DATE_PRECISIONS.has(value as WatchDatePrecisionValue)) {
+    return null;
+  }
+
+  return value as WatchDatePrecisionValue;
+}
+
 function isValidDateString(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return false;
@@ -72,6 +98,69 @@ function isValidDateString(value: string) {
 
   const date = new Date(`${value}T00:00:00.000Z`);
   return !Number.isNaN(date.valueOf()) && date.toISOString().startsWith(value);
+}
+
+function normalizeDateString(value: string) {
+  const trimmedValue = value.trim();
+
+  if (/^\d{8}$/.test(trimmedValue)) {
+    return `${trimmedValue.slice(0, 4)}-${trimmedValue.slice(4, 6)}-${trimmedValue.slice(6)}`;
+  }
+
+  return trimmedValue;
+}
+
+function parseYearString(value: string) {
+  if (!/^\d{4}$/.test(value)) {
+    return null;
+  }
+
+  return Number(value);
+}
+
+function parseWatchedDateInput({
+  rawWatchedOn,
+  rawWatchedYear,
+  rawWatchedDatePrecision,
+}: Pick<
+  MovieEntryInput,
+  "rawWatchedOn" | "rawWatchedYear" | "rawWatchedDatePrecision"
+>): ParsedWatchDateInput | { error: string } {
+  const precision = parseWatchDatePrecision(rawWatchedDatePrecision || "day");
+
+  if (!precision) {
+    return { error: "Date precision is invalid." };
+  }
+
+  if (precision === "day") {
+    const watchedOn = normalizeDateString(rawWatchedOn);
+
+    if (!watchedOn) {
+      return { error: "Date watched is required." };
+    }
+
+    if (!isValidDateString(watchedOn)) {
+      return { error: "Date watched must be a valid date." };
+    }
+
+    return {
+      watchedOn,
+      watchedYear: Number(watchedOn.slice(0, 4)),
+      watchedDatePrecision: "day",
+    };
+  }
+
+  const watchedYear = parseYearString(rawWatchedYear);
+
+  if (watchedYear == null) {
+    return { error: "Watched year must be four digits." };
+  }
+
+  return {
+    watchedOn: null,
+    watchedYear,
+    watchedDatePrecision: "year",
+  };
 }
 
 function getUniqueHandles(values: FormDataEntryValue[]) {
@@ -89,7 +178,9 @@ function parseUpdateMovieEntryInput(
 ): UpdateMovieEntryInput {
   return {
     watchEntryId: input.watchEntryId.trim(),
-    watchedOn: input.watchedOn.trim(),
+    watchedOn: input.watchedOn?.trim() || null,
+    watchedYear: input.watchedYear,
+    watchedDatePrecision: input.watchedDatePrecision,
     languageWatched: input.languageWatched.trim() || "English",
     watchedWithHandles: Array.from(
       new Set(
@@ -112,7 +203,13 @@ function parseMovieEntryInputs(formData: FormData): MovieEntryInput[] {
       {
         title: String(formData.get("title") ?? "").trim(),
         tmdbId: parseTmdbId(formData.get("tmdbId")),
-        watchedOn: String(formData.get("watchedOn") ?? "").trim(),
+        rawWatchedOn: String(formData.get("watchedOn") ?? "").trim(),
+        rawWatchedYear: String(formData.get("watchedYear") ?? "").trim(),
+        rawWatchedDatePrecision: String(
+          formData.get("watchedDatePrecision") ?? "day",
+        )
+          .trim()
+          .toLowerCase(),
         languageWatched:
           String(formData.get("languageWatched") ?? "").trim() || "English",
         rawStatus: String(formData.get("status") ?? "watched")
@@ -126,7 +223,13 @@ function parseMovieEntryInputs(formData: FormData): MovieEntryInput[] {
   return Array.from(new Set(rowIds)).map((rowId) => ({
     title: String(formData.get(`title:${rowId}`) ?? "").trim(),
     tmdbId: parseTmdbId(formData.get(`tmdbId:${rowId}`)),
-    watchedOn: String(formData.get(`watchedOn:${rowId}`) ?? "").trim(),
+    rawWatchedOn: String(formData.get(`watchedOn:${rowId}`) ?? "").trim(),
+    rawWatchedYear: String(formData.get(`watchedYear:${rowId}`) ?? "").trim(),
+    rawWatchedDatePrecision: String(
+      formData.get(`watchedDatePrecision:${rowId}`) ?? "day",
+    )
+      .trim()
+      .toLowerCase(),
     languageWatched:
       String(formData.get(`languageWatched:${rowId}`) ?? "").trim() ||
       "English",
@@ -471,24 +574,32 @@ export async function addMovieEntry(
     };
   }
 
-  const missingWatchedOnIndex = entries.findIndex((entry) => !entry.watchedOn);
-  if (missingWatchedOnIndex >= 0) {
-    return {
-      status: "error",
-      message:
-        entries.length === 1
-          ? "Date watched is required."
-          : `Row ${missingWatchedOnIndex + 1}: date watched is required.`,
-    };
+  const entriesWithStatus: ParsedMovieEntryInput[] = [];
+
+  for (const [index, entry] of entries.entries()) {
+    const watchedDate = parseWatchedDateInput(entry);
+
+    if ("error" in watchedDate) {
+      return {
+        status: "error",
+        message:
+          entries.length === 1
+            ? watchedDate.error
+            : `Row ${index + 1}: ${watchedDate.error.toLocaleLowerCase()}`,
+      };
+    }
+
+    entriesWithStatus.push({
+      title: entry.title,
+      tmdbId: entry.tmdbId,
+      languageWatched: entry.languageWatched,
+      watchedWithHandles: entry.watchedWithHandles,
+      ...watchedDate,
+      status: parseWatchStatus(entry.rawStatus),
+    });
   }
 
-  const entriesWithStatus = entries.map((entry) => ({
-    ...entry,
-    status: parseWatchStatus(entry.rawStatus),
-  }));
-  const invalidStatusIndex = entriesWithStatus.findIndex(
-    (entry) => !entry.status,
-  );
+  const invalidStatusIndex = entriesWithStatus.findIndex((entry) => !entry.status);
   if (invalidStatusIndex >= 0) {
     return {
       status: "error",
@@ -605,6 +716,8 @@ export async function addMovieEntry(
             userId: session.user.id,
             movieId,
             watchedOn: entry.watchedOn,
+            watchedYear: entry.watchedYear,
+            watchedDatePrecision: entry.watchedDatePrecision,
             languageWatched: entry.languageWatched,
             status: entry.status,
           })
@@ -637,6 +750,7 @@ export async function addMovieEntry(
   }
 
   revalidatePath("/movies");
+  revalidatePath("/charts");
   revalidatePath("/");
 
   return {
@@ -709,6 +823,7 @@ export async function deleteMovieEntry(
   }
 
   revalidatePath("/movies");
+  revalidatePath("/charts");
   revalidatePath("/");
 
   return {
@@ -740,10 +855,16 @@ export async function updateMovieEntry(
     };
   }
 
-  if (!isValidDateString(entry.watchedOn)) {
+  const watchedDate = parseWatchedDateInput({
+    rawWatchedOn: entry.watchedOn ?? "",
+    rawWatchedYear: String(entry.watchedYear),
+    rawWatchedDatePrecision: entry.watchedDatePrecision,
+  });
+
+  if ("error" in watchedDate) {
     return {
       status: "error",
-      message: "Date watched must be a valid date.",
+      message: watchedDate.error,
     };
   }
 
@@ -793,7 +914,9 @@ export async function updateMovieEntry(
       await tx
         .update(watchEntries)
         .set({
-          watchedOn: entry.watchedOn,
+          watchedOn: watchedDate.watchedOn,
+          watchedYear: watchedDate.watchedYear,
+          watchedDatePrecision: watchedDate.watchedDatePrecision,
           languageWatched: entry.languageWatched,
           updatedAt: new Date(),
         })
@@ -822,6 +945,7 @@ export async function updateMovieEntry(
   }
 
   revalidatePath("/movies");
+  revalidatePath("/charts");
   revalidatePath("/");
 
   return {
@@ -892,6 +1016,7 @@ export async function reorderMovieRankings(
   }
 
   revalidatePath("/movies");
+  revalidatePath("/charts");
   revalidatePath("/");
 
   return {
@@ -1040,6 +1165,7 @@ export async function syncMovieMetadata(
   }
 
   revalidatePath("/movies");
+  revalidatePath("/charts");
   revalidatePath(`/movies/${movieId}`);
   revalidatePath("/");
 

@@ -35,7 +35,11 @@ export default async function ChartsPage() {
 
       <div className="grid gap-4 xl:grid-cols-2">
         <ChartPanel title="Watched Over Time" eyebrow="All time">
-          <WatchedOverTimeChart data={stats.monthlyWatched} />
+          <WatchedOverTimeChart
+            monthlyData={stats.monthlyWatched}
+            yearlyData={stats.yearlyWatched}
+            monthlyOmittedCount={stats.yearOnlyWatchedOmittedFromMonthly}
+          />
         </ChartPanel>
 
         <ChartPanel title="Release Years">
@@ -50,7 +54,10 @@ export default async function ChartsPage() {
         </ChartPanel>
 
         <ChartPanel title="Genres Over Time" eyebrow="Top 5 genres">
-          <GenreOverTimeChart data={stats.genreOverTime} />
+          <GenreOverTimeChart
+            monthlyData={stats.monthlyGenreOverTime}
+            yearlyData={stats.yearlyGenreOverTime}
+          />
         </ChartPanel>
 
         <ChartPanel title="Top Directors" eyebrow="Top 10">

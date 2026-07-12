@@ -24,6 +24,20 @@ type DatePickerFieldProps = {
 
 const DATE_FORMATS = ["yyyy-MM-dd", "M/d/yyyy", "M/d/yy"] as const;
 
+function formatDateDigits(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+
+  if (digits.length <= 4) {
+    return digits;
+  }
+
+  if (digits.length <= 6) {
+    return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+  }
+
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
+}
+
 function parseEnteredDate(value: string) {
   const trimmedValue = value.trim();
 
@@ -75,6 +89,10 @@ export function DatePickerField({
     }
   }
 
+  function handleInputChange(value: string) {
+    setFieldValue(formatDateDigits(value));
+  }
+
   return (
     <div className="grid gap-1.5">
       <Popover open={open} onOpenChange={setOpen}>
@@ -85,11 +103,12 @@ export function DatePickerField({
             autoFocus={autoFocus}
             value={fieldValue}
             disabled={disabled}
-            onChange={(event) => setFieldValue(event.target.value)}
+            onChange={(event) => handleInputChange(event.target.value)}
             onBlur={handleInputBlur}
             onKeyDown={onKeyDown}
-            placeholder="YYYY-MM-DD"
+            placeholder="YYYYMMDD"
             inputMode="numeric"
+            maxLength={10}
             autoComplete="off"
             required={required}
             aria-invalid={fieldValue !== "" && !selectedDate}

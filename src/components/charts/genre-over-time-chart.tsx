@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
+import { Button } from "@/components/ui/button";
 import {
   ChartContainer,
   ChartLegend,
@@ -21,7 +23,8 @@ const chartColors = [
 ];
 
 type GenreOverTimeChartProps = {
-  data: GenreOverTimeCount[];
+  monthlyData: GenreOverTimeCount[];
+  yearlyData: GenreOverTimeCount[];
 };
 
 function getGenreLabels(data: GenreOverTimeCount[]) {
@@ -34,7 +37,12 @@ function getGenreLabels(data: GenreOverTimeCount[]) {
   return Object.keys(firstItem.moviesByGenre);
 }
 
-export function GenreOverTimeChart({ data }: GenreOverTimeChartProps) {
+export function GenreOverTimeChart({
+  monthlyData,
+  yearlyData,
+}: GenreOverTimeChartProps) {
+  const [mode, setMode] = useState<"monthly" | "yearly">("monthly");
+  const data = mode === "monthly" ? monthlyData : yearlyData;
   const genreLabels = getGenreLabels(data);
   const genreSeries = genreLabels.map((label, index) => ({
     key: `genre${index}`,
@@ -44,14 +52,6 @@ export function GenreOverTimeChart({ data }: GenreOverTimeChartProps) {
   const hasData = data.some((month) =>
     genreLabels.some((genre) => Number(month[genre]) > 0),
   );
-
-  if (!hasData) {
-    return (
-      <div className="flex h-[260px] items-center justify-center border border-dashed border-[var(--border)] text-sm text-[var(--muted-foreground)]">
-        No genre metadata synced yet.
-      </div>
-    );
-  }
 
   const chartConfig = Object.fromEntries(
     genreSeries.map((genre) => [
@@ -76,47 +76,75 @@ export function GenreOverTimeChart({ data }: GenreOverTimeChartProps) {
   });
 
   return (
-    <ChartContainer
-      config={chartConfig}
-      className="h-[260px] w-full aspect-auto"
-    >
-      <LineChart
-        data={chartData}
-        margin={{ top: 8, right: 10, left: -24, bottom: 0 }}
-      >
-        <CartesianGrid vertical={false} strokeDasharray="2 4" />
-        <XAxis
-          dataKey="label"
-          tickLine={false}
-          axisLine={false}
-          tickMargin={8}
-          interval="preserveStartEnd"
-          minTickGap={18}
-        />
-        <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
-        <ChartTooltip
-          cursor={false}
-          isAnimationActive={false}
-          content={
-            <ChartTooltipContent
-              indicator="line"
-              labelFormatter={(_, payload) => payload[0]?.payload?.label}
+    <div className="grid gap-2">
+      <div className="flex">
+        <Button
+          type="button"
+          variant={mode === "monthly" ? "default" : "outline"}
+          size="sm"
+          className="h-7 rounded-none px-2 text-xs"
+          onClick={() => setMode("monthly")}
+        >
+          Monthly
+        </Button>
+        <Button
+          type="button"
+          variant={mode === "yearly" ? "default" : "outline"}
+          size="sm"
+          className="h-7 rounded-none border-l-0 px-2 text-xs"
+          onClick={() => setMode("yearly")}
+        >
+          Yearly
+        </Button>
+      </div>
+      {hasData ? (
+        <ChartContainer
+          config={chartConfig}
+          className="h-[260px] w-full aspect-auto"
+        >
+          <LineChart
+            data={chartData}
+            margin={{ top: 8, right: 10, left: -24, bottom: 0 }}
+          >
+            <CartesianGrid vertical={false} strokeDasharray="2 4" />
+            <XAxis
+              dataKey="label"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              interval="preserveStartEnd"
+              minTickGap={18}
             />
-          }
-        />
-        <ChartLegend content={<ChartLegendContent />} />
-        {genreSeries.map((genre, index) => (
-          <Line
-            key={genre.key}
-            type="linear"
-            dataKey={genre.key}
-            stroke={`var(--color-${genre.key})`}
-            strokeWidth={index === 0 ? 2 : 1.5}
-            dot={false}
-            isAnimationActive={false}
-          />
-        ))}
-      </LineChart>
-    </ChartContainer>
+            <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
+            <ChartTooltip
+              cursor={false}
+              isAnimationActive={false}
+              content={
+                <ChartTooltipContent
+                  indicator="line"
+                  labelFormatter={(_, payload) => payload[0]?.payload?.label}
+                />
+              }
+            />
+            <ChartLegend content={<ChartLegendContent />} />
+            {genreSeries.map((genre, index) => (
+              <Line
+                key={genre.key}
+                type="linear"
+                dataKey={genre.key}
+                stroke={`var(--color-${genre.key})`}
+                strokeWidth={index === 0 ? 2 : 1.5}
+                dot={false}
+                isAnimationActive={false}
+              />
+            ))}
+          </LineChart>
+        </ChartContainer>
+      ) : (
+        <div className="flex h-[260px] items-center justify-center border border-dashed border-[var(--border)] text-sm text-[var(--muted-foreground)]">
+          No genre metadata synced yet.
+        </div>
+      )}
+    </div>
   );
 }

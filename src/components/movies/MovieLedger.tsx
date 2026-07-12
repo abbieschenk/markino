@@ -108,7 +108,7 @@ function MovieWatchHistory({
               field="watchedOn"
               isActive={isActiveEditTarget(watchEntry, "watchedOn")}
               onEdit={onEdit}
-              value={watchEntry.watchedOn}
+              value={watchEntry.watchedDateDisplay}
             />
             <EditableMovieEntryCellButton
               entry={watchEntry}
@@ -128,7 +128,7 @@ function MovieWatchHistory({
             />
             <div className="flex justify-end">
               <DeleteMovieButton
-                title={`${entry.title} (${watchEntry.watchedOn})`}
+                title={`${entry.title} (${watchEntry.watchedDateDisplay})`}
                 watchEntryId={watchEntry.watchEntryId}
               />
             </div>

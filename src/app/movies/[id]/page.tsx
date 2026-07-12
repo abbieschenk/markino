@@ -124,7 +124,7 @@ export default async function MovieDetailPage({
         </div>
         <div className="grid grid-cols-[9rem_1fr] border-b border-[var(--border)] px-4 py-3">
           <dt className="text-[var(--muted-foreground)]">Watched on</dt>
-          <dd>{movie.watchedOn}</dd>
+          <dd>{movie.watchedDateDisplay}</dd>
         </div>
         <div className="grid grid-cols-[9rem_1fr] border-b border-[var(--border)] px-4 py-3 sm:border-b-0 sm:border-r">
           <dt className="text-[var(--muted-foreground)]">Language</dt>
