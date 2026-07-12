@@ -16,6 +16,7 @@ export type MovieLedgerEntry = {
   id: string;
   movieId: string;
   watchEntryId: string;
+  canEdit: boolean;
   rank: number;
   title: string;
   isMetadataSynced: boolean;
@@ -146,6 +147,7 @@ function mapLedgerEntry(
     id: entry.movieId,
     movieId: entry.movieId,
     watchEntryId: entry.id,
+    canEdit: entry.userId === userId,
     rank,
     title: entry.movie.title,
     isMetadataSynced: entry.movie.tmdbId != null,

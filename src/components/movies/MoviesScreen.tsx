@@ -37,6 +37,7 @@ export async function MoviesScreen({
     <MovieLedger
       data={movieLedger}
       canSyncMetadata={canSyncMetadata}
+      watchedWithOptions={watchedWithOptions.map((user) => user.handle)}
       toolbarActions={
         <AddMovieDialog
           canAdd

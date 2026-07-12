@@ -38,6 +38,12 @@ type MovieActionResult = {
   status: "error" | "success";
   message: string | null;
 };
+type UpdateMovieEntryInput = {
+  watchEntryId: string;
+  watchedOn: string;
+  languageWatched: string;
+  watchedWithHandles: string[];
+};
 type MovieEntryInput = {
   title: string;
   watchedOn: string;
@@ -57,6 +63,15 @@ function parseWatchStatus(value: string): WatchStatusValue | null {
   return value as WatchStatusValue;
 }
 
+function isValidDateString(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.valueOf()) && date.toISOString().startsWith(value);
+}
+
 function getUniqueHandles(values: FormDataEntryValue[]) {
   return Array.from(
     new Set(
@@ -65,6 +80,23 @@ function getUniqueHandles(values: FormDataEntryValue[]) {
         .filter(Boolean),
     ),
   );
+}
+
+function parseUpdateMovieEntryInput(
+  input: UpdateMovieEntryInput,
+): UpdateMovieEntryInput {
+  return {
+    watchEntryId: input.watchEntryId.trim(),
+    watchedOn: input.watchedOn.trim(),
+    languageWatched: input.languageWatched.trim() || "English",
+    watchedWithHandles: Array.from(
+      new Set(
+        input.watchedWithHandles
+          .map((handle) => handle.trim().toLowerCase())
+          .filter(Boolean),
+      ),
+    ),
+  };
 }
 
 function parseMovieEntryInputs(formData: FormData): MovieEntryInput[] {
@@ -410,6 +442,119 @@ export async function deleteMovieEntry(
     return {
       status: "error",
       message: "Unable to delete the movie entry.",
+    };
+  }
+
+  revalidatePath("/movies");
+  revalidatePath("/");
+
+  return {
+    status: "success",
+    message: null,
+  };
+}
+
+export async function updateMovieEntry(
+  input: UpdateMovieEntryInput,
+): Promise<MovieActionResult> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session?.user?.id) {
+    return {
+      status: "error",
+      message: "You must be signed in to edit a movie.",
+    };
+  }
+
+  const entry = parseUpdateMovieEntryInput(input);
+
+  if (!entry.watchEntryId) {
+    return {
+      status: "error",
+      message: "Movie entry is missing.",
+    };
+  }
+
+  if (!isValidDateString(entry.watchedOn)) {
+    return {
+      status: "error",
+      message: "Date watched must be a valid date.",
+    };
+  }
+
+  if (!entry.languageWatched) {
+    return {
+      status: "error",
+      message: "Language is required.",
+    };
+  }
+
+  const participantHandles = entry.watchedWithHandles.filter(
+    (handle) => handle !== session.user.handle,
+  );
+  const participantUsers =
+    participantHandles.length > 0
+      ? await db
+          .select({ id: users.id, handle: users.handle })
+          .from(users)
+          .where(inArray(users.handle, participantHandles))
+      : [];
+
+  if (participantUsers.length !== participantHandles.length) {
+    return {
+      status: "error",
+      message: "One or more selected handles could not be found.",
+    };
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      const watchEntry = await tx.query.watchEntries.findFirst({
+        where: eq(watchEntries.id, entry.watchEntryId),
+        columns: {
+          id: true,
+          userId: true,
+        },
+      });
+
+      if (!watchEntry) {
+        throw new Error("WATCH_ENTRY_NOT_FOUND");
+      }
+
+      if (watchEntry.userId !== session.user.id) {
+        throw new Error("WATCH_ENTRY_FORBIDDEN");
+      }
+
+      await tx
+        .update(watchEntries)
+        .set({
+          watchedOn: entry.watchedOn,
+          languageWatched: entry.languageWatched,
+          updatedAt: new Date(),
+        })
+        .where(eq(watchEntries.id, entry.watchEntryId));
+
+      await tx
+        .delete(watchEntryParticipants)
+        .where(eq(watchEntryParticipants.watchEntryId, entry.watchEntryId));
+
+      if (participantUsers.length > 0) {
+        await tx.insert(watchEntryParticipants).values(
+          participantUsers.map((user) => ({
+            watchEntryId: entry.watchEntryId,
+            userId: user.id,
+          })),
+        );
+      }
+    });
+  } catch (error) {
+    console.error("Failed to update movie entry", error);
+
+    return {
+      status: "error",
+      message: "Unable to update the movie entry.",
     };
   }
 

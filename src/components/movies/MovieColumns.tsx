@@ -16,6 +16,12 @@ import type { Column } from "@tanstack/react-table";
 import { resyncMovieMetadata } from "@/app/movies/actions";
 import { Button } from "@/components/ui/button";
 import { DeleteMovieButton } from "@/components/movies/DeleteMovieButton";
+import {
+  EditableMovieEntryCellButton,
+  EditableWatchedWithCellButton,
+  type EditableMovieEntryField,
+  type MovieEntryEditTarget,
+} from "@/components/movies/editable-movie-entry-cells";
 import { SyncMovieMetadataButton } from "@/components/movies/sync-movie-metadata-button";
 import { cn } from "@/lib/utils";
 import type { MovieLedgerEntry } from "@/lib/movies";
@@ -55,12 +61,26 @@ function getSortButtonClassName(column: Column<MovieLedgerEntry>) {
 }
 
 type MovieColumnsOptions = {
+  activeEditTarget: MovieEntryEditTarget | null;
   canSyncMetadata: boolean;
+  onEdit: (target: MovieEntryEditTarget) => void;
 };
 
 export function createMovieColumns({
+  activeEditTarget,
   canSyncMetadata,
+  onEdit,
 }: MovieColumnsOptions): ColumnDef<MovieLedgerEntry>[] {
+  function isActiveEditTarget(
+    entry: MovieLedgerEntry,
+    field: EditableMovieEntryField,
+  ) {
+    return (
+      activeEditTarget?.entry.watchEntryId === entry.watchEntryId &&
+      activeEditTarget.field === field
+    );
+  }
+
   return [
   {
     accessorKey: "rank",
@@ -123,6 +143,15 @@ export function createMovieColumns({
         <SortIcon column={column} />
       </Button>
     ),
+    cell: ({ row }) => (
+      <EditableMovieEntryCellButton
+        entry={row.original}
+        field="watchedOn"
+        isActive={isActiveEditTarget(row.original, "watchedOn")}
+        onEdit={onEdit}
+        value={row.original.watchedOn}
+      />
+    ),
   },
   {
     accessorKey: "language",
@@ -136,6 +165,15 @@ export function createMovieColumns({
         Language
         <SortIcon column={column} />
       </Button>
+    ),
+    cell: ({ row }) => (
+      <EditableMovieEntryCellButton
+        entry={row.original}
+        field="language"
+        isActive={isActiveEditTarget(row.original, "language")}
+        onEdit={onEdit}
+        value={row.original.language}
+      />
     ),
   },
   {
@@ -178,7 +216,12 @@ export function createMovieColumns({
     cell: ({ row }) => {
       const watchedWith = row.getValue<string[]>("watchedWith");
       return (
-        <span className="text-muted-foreground">{watchedWith.join(", ")}</span>
+        <EditableWatchedWithCellButton
+          entry={row.original}
+          isActive={isActiveEditTarget(row.original, "watchedWith")}
+          onEdit={onEdit}
+          value={watchedWith}
+        />
       );
     },
     filterFn: watchedWithFilter,
