@@ -7,13 +7,11 @@ import {
   ArrowsDownUp,
   Check,
 } from "@phosphor-icons/react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { actions } from "astro:actions";
 import { startTransition, useState } from "react";
 import { toast } from "sonner";
 import type { ColumnDef, FilterFn } from "@tanstack/react-table";
 import type { Column } from "@tanstack/react-table";
-import { resyncMovieMetadata } from "@/app/movies/actions";
 import { Button } from "@/components/ui/button";
 import { DeleteMovieButton } from "@/components/movies/DeleteMovieButton";
 import {
@@ -23,6 +21,7 @@ import {
   type MovieEntryEditTarget,
 } from "@/components/movies/editable-movie-entry-cells";
 import { SyncMovieMetadataButton } from "@/components/movies/sync-movie-metadata-button";
+import { getActionData } from "@/lib/action-result";
 import { cn } from "@/lib/utils";
 import type { MovieLedgerEntry } from "@/lib/movies";
 
@@ -147,7 +146,7 @@ export function createMovieColumns({
       const status = row.getValue<MovieLedgerEntry["status"]>("status");
 
       return (
-        <Link
+        <a
           href={`/movies/${row.original.id}`}
           className={cn(
             "block max-w-[28rem] truncate hover:underline",
@@ -156,7 +155,7 @@ export function createMovieColumns({
           title={row.original.title}
         >
           {row.getValue("title")}
-        </Link>
+        </a>
       );
     },
   },
@@ -356,7 +355,6 @@ function ResyncMovieMetadataButton({
   movieId: string;
   title: string;
 }) {
-  const router = useRouter();
   const [pending, setPending] = useState(false);
 
   function handleResync() {
@@ -364,7 +362,9 @@ function ResyncMovieMetadataButton({
 
     startTransition(async () => {
       try {
-        const result = await resyncMovieMetadata(movieId);
+        const result = await getActionData(
+          actions.resyncMovieMetadata({ movieId }),
+        );
 
         if (result.status === "error") {
           toast.error(result.message ?? "Unable to resync movie metadata.");
@@ -372,7 +372,7 @@ function ResyncMovieMetadataButton({
         }
 
         toast.success("Movie metadata resynced.");
-        router.refresh();
+        window.location.reload();
       } catch (error) {
         console.error("Failed to resync movie metadata", error);
         toast.error("Unable to resync movie metadata.");

@@ -1,0 +1,36 @@
+---
+import { AuthNav } from "@/components/auth/AuthNav";
+import { areSignupsEnabled } from "@/lib/auth-config";
+
+const signupsEnabled = areSignupsEnabled();
+const links = Astro.locals.user
+  ? [
+      { href: "/movies", label: "Movies" },
+      { href: "/charts", label: "Charts" },
+    ]
+  : [{ href: "/", label: "Overview" }];
+---
+
+<header class="sticky top-0 z-10 border-b border-[var(--border)] bg-[color:color-mix(in_srgb,var(--background)_92%,white)] backdrop-blur">
+  <div class="flex min-h-14 items-center justify-between gap-4">
+    <a
+      href="/"
+      class="select-none text-xl font-bold uppercase [font-family:Futura,'Futura_PT','Trebuchet_MS',sans-serif]"
+    >
+      MARKINO
+    </a>
+    <div class="flex flex-wrap items-center gap-3">
+      <nav class="flex flex-wrap items-center gap-1 text-sm text-[var(--muted-foreground)]">
+        {links.map((link) => (
+          <a
+            href={link.href}
+            class="px-2 py-1 hover:text-[var(--foreground)]"
+          >
+            {link.label}
+          </a>
+        ))}
+      </nav>
+      <AuthNav client:load signupsEnabled={signupsEnabled} />
+    </div>
+  </div>
+</header>

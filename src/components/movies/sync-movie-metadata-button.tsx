@@ -1,13 +1,9 @@
 "use client";
 
 import { ArrowsClockwise } from "@phosphor-icons/react";
-import { useRouter } from "next/navigation";
 import { startTransition, useState } from "react";
 
-import {
-  searchTmdbMovieMatches,
-  syncMovieMetadata,
-} from "@/app/movies/actions";
+import { actions } from "astro:actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,11 +13,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { getActionData } from "@/lib/action-result";
+import type { TmdbMovieMatch } from "@/lib/tmdb";
 import { cn } from "@/lib/utils";
 
-type TmdbMatch = Awaited<
-  ReturnType<typeof searchTmdbMovieMatches>
->["matches"][number];
+type TmdbMatch = TmdbMovieMatch;
 
 type SyncMovieMetadataButtonProps = {
   movieId: string;
@@ -34,7 +30,6 @@ export function SyncMovieMetadataButton({
   title,
   display = "label",
 }: SyncMovieMetadataButtonProps) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [matches, setMatches] = useState<TmdbMatch[]>([]);
   const [selectedTmdbId, setSelectedTmdbId] = useState<number | null>(null);
@@ -50,7 +45,9 @@ export function SyncMovieMetadataButton({
 
     startTransition(async () => {
       try {
-        const result = await searchTmdbMovieMatches(movieId);
+        const result = await getActionData(
+          actions.searchTmdbMovieMatches({ movieId }),
+        );
 
         if (result.status === "error") {
           setError(result.message);
@@ -87,7 +84,9 @@ export function SyncMovieMetadataButton({
 
     startTransition(async () => {
       try {
-        const result = await syncMovieMetadata(movieId, selectedTmdbId);
+        const result = await getActionData(
+          actions.syncMovieMetadata({ movieId, tmdbId: selectedTmdbId }),
+        );
 
         if (result.status === "error") {
           setError(result.message ?? "Unable to sync movie metadata.");
@@ -95,7 +94,7 @@ export function SyncMovieMetadataButton({
         }
 
         setOpen(false);
-        router.refresh();
+        window.location.reload();
       } catch (syncError) {
         console.error("Failed to sync movie metadata", syncError);
         setError("Unable to sync movie metadata.");

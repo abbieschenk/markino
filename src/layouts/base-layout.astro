@@ -1,0 +1,36 @@
+---
+import SiteNav from "@/components/layout/site-nav.astro";
+import { Toaster } from "@/components/ui/sonner";
+import "@/styles.css";
+
+type Props = {
+  description?: string;
+  title?: string;
+};
+
+const {
+  description = "A quiet movie watch and ranking ledger.",
+  title = "Markino",
+} = Astro.props;
+const pageTitle = title === "Markino" ? title : `${title} | Markino`;
+---
+
+<!doctype html>
+<html lang="en" class="h-full antialiased">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content={description} />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" href="/favicon.ico" />
+    <title>{pageTitle}</title>
+  </head>
+  <body class="min-h-full bg-[var(--background)] text-[var(--foreground)]">
+    <div class="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 sm:px-6">
+      <SiteNav />
+      <main class="flex-1 py-6">
+        <slot />
+      </main>
+    </div>
+    <Toaster client:load position="bottom-right" richColors={false} />
+  </body>
+</html>

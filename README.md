@@ -1,6 +1,6 @@
 # Markino
 
-Markino is a local-network movie watch and ranking app built with Next.js, Drizzle, Better Auth, and Postgres.
+Markino is a local-network movie watch and ranking app built with Astro, React islands, Drizzle, Better Auth, and Postgres.
 
 ## Setup
 
@@ -32,6 +32,16 @@ pnpm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## Local Network Runtime
+
+Run the app and database together:
+
+```bash
+docker compose up --build
+```
+
+The Astro app is exposed on [http://localhost:3000](http://localhost:3000). Postgres stays on the Compose network for the app and is also bound to `127.0.0.1:54322` for local Drizzle commands.
+
 ## Local Database
 
 `pnpm run db:local` creates or starts a Docker-backed Postgres database with Docker Compose.
@@ -50,4 +60,8 @@ To change the local database defaults, update `docker-compose.yml` and keep `.en
 DATABASE_URL=postgres://markino:markino@localhost:54322/markino
 ```
 
-Deployed environments should set `DATABASE_URL` to any valid Postgres connection string.
+Containerized app runtime uses:
+
+```bash
+DATABASE_URL=postgres://markino:markino@postgres:5432/markino
+```

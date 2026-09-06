@@ -1,8 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { startTransition, useState } from "react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +16,6 @@ type AuthNavProps = {
 };
 
 export function AuthNav({ signupsEnabled }: AuthNavProps) {
-  const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
   const [isSigningOut, setIsSigningOut] = useState(false);
 
@@ -33,10 +30,7 @@ export function AuthNav({ signupsEnabled }: AuthNavProps) {
       return;
     }
 
-    startTransition(() => {
-      router.push("/");
-      router.refresh();
-    });
+    window.location.assign("/");
   }
 
   if (isPending) {
@@ -50,19 +44,19 @@ export function AuthNav({ signupsEnabled }: AuthNavProps) {
   if (!session) {
     return (
       <div className="flex items-center gap-1 text-sm">
-        <Link
+        <a
           href="/sign-in"
           className="px-2 py-1 text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
         >
           Sign In
-        </Link>
+        </a>
         {signupsEnabled ? (
-          <Link
+          <a
             href="/sign-up"
             className="px-2 py-1 text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
           >
             Sign Up
-          </Link>
+          </a>
         ) : null}
       </div>
     );
@@ -87,7 +81,7 @@ export function AuthNav({ signupsEnabled }: AuthNavProps) {
         className="min-w-40 rounded-none border border-[var(--border)] bg-[var(--background)] p-1 shadow-[0_16px_40px_rgba(0,0,0,0.12)]"
       >
         <DropdownMenuItem asChild className="rounded-none text-[var(--muted-foreground)]">
-          <Link href="/settings">Settings</Link>
+          <a href="/settings">Settings</a>
         </DropdownMenuItem>
         <DropdownMenuItem
           className="rounded-none text-[var(--muted-foreground)]"

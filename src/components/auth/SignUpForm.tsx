@@ -1,8 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { startTransition, useState } from "react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,7 +39,6 @@ function validateHandle(handle: string) {
 }
 
 export function SignUpForm() {
-  const router = useRouter();
   const [form, setForm] = useState(INITIAL_STATE);
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
@@ -79,10 +76,7 @@ export function SignUpForm() {
       return;
     }
 
-    startTransition(() => {
-      router.push("/movies");
-      router.refresh();
-    });
+    window.location.assign("/movies");
   }
 
   return (
@@ -187,12 +181,12 @@ export function SignUpForm() {
       <div className="flex items-center justify-between gap-3 border-t border-[var(--border)] px-4 py-3">
         <p className="text-xs text-[var(--muted-foreground)]">
           Already have an account?{" "}
-          <Link
+          <a
             href="/sign-in"
             className="text-[var(--foreground)] underline underline-offset-4"
           >
             Sign in
-          </Link>
+          </a>
         </p>
         <Button form="sign-up-form" type="submit" size="lg" disabled={isPending}>
           {isPending ? "Creating..." : "Create Account"}

@@ -1,18 +1,18 @@
 "use client";
 
 import { X } from "@phosphor-icons/react";
+import { actions } from "astro:actions";
 import { startTransition, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
 
-import { searchTmdbMovieMatchesByTitle } from "@/app/movies/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getActionData } from "@/lib/action-result";
+import type { TmdbMovieMatch } from "@/lib/tmdb";
 import { cn } from "@/lib/utils";
 
-type TmdbMatch = Awaited<
-  ReturnType<typeof searchTmdbMovieMatchesByTitle>
->["matches"][number];
+type TmdbMatch = TmdbMovieMatch;
 
 type MovieTitleSearchFieldProps = {
   id: string;
@@ -64,7 +64,9 @@ export function MovieTitleSearchField({
       setPending(true);
       startTransition(async () => {
         try {
-          const result = await searchTmdbMovieMatchesByTitle(query);
+          const result = await getActionData(
+            actions.searchTmdbMovieMatchesByTitle({ title: query }),
+          );
 
           if (requestIdRef.current !== currentRequestId) {
             return;

@@ -1,4 +1,5 @@
-import "server-only";
+import "@/lib/load-env";
+
 import { eq } from "drizzle-orm";
 import { betterAuth } from "better-auth";
 import { APIError } from "better-auth/api";
@@ -49,7 +50,6 @@ function validateHandle(handle: string) {
 
 const baseURL =
   process.env.BETTER_AUTH_URL ??
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined) ??
   "http://localhost:3000";
 
 const secret = process.env.BETTER_AUTH_SECRET;

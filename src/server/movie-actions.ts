@@ -1,7 +1,3 @@
-"use server";
-
-import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { and, eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "@/db";
@@ -241,9 +237,9 @@ function parseTmdbId(value: FormDataEntryValue | null) {
   return Number.isInteger(tmdbId) && tmdbId > 0 ? tmdbId : null;
 }
 
-async function requireSuperadmin() {
+async function requireSuperadmin(requestHeaders: Headers) {
   const session = await auth.api.getSession({
-    headers: await headers(),
+    headers: requestHeaders,
   });
 
   if (!session?.user?.id) {
@@ -537,9 +533,10 @@ async function writeMovieMetadata(
 
 export async function addMovieEntry(
   formData: FormData,
+  requestHeaders: Headers,
 ): Promise<{ status: "idle" | "error" | "success"; message: string | null }> {
   const session = await auth.api.getSession({
-    headers: await headers(),
+    headers: requestHeaders,
   });
 
   if (!session?.user?.id) {
@@ -743,10 +740,7 @@ export async function addMovieEntry(
     };
   }
 
-  revalidatePath("/movies");
-  revalidatePath("/charts");
-  revalidatePath("/");
-
+      
   return {
     status: "success",
     message:
@@ -756,9 +750,10 @@ export async function addMovieEntry(
 
 export async function deleteMovieEntry(
   watchEntryId: string,
+  requestHeaders: Headers,
 ): Promise<{ status: "error" | "success"; message: string | null }> {
   const session = await auth.api.getSession({
-    headers: await headers(),
+    headers: requestHeaders,
   });
 
   if (!session?.user?.id) {
@@ -816,10 +811,7 @@ export async function deleteMovieEntry(
     };
   }
 
-  revalidatePath("/movies");
-  revalidatePath("/charts");
-  revalidatePath("/");
-
+      
   return {
     status: "success",
     message: null,
@@ -828,9 +820,10 @@ export async function deleteMovieEntry(
 
 export async function updateMovieEntry(
   input: UpdateMovieEntryInput,
+  requestHeaders: Headers,
 ): Promise<MovieActionResult> {
   const session = await auth.api.getSession({
-    headers: await headers(),
+    headers: requestHeaders,
   });
 
   if (!session?.user?.id) {
@@ -939,10 +932,7 @@ export async function updateMovieEntry(
     };
   }
 
-  revalidatePath("/movies");
-  revalidatePath("/charts");
-  revalidatePath("/");
-
+      
   return {
     status: "success",
     message: null,
@@ -951,9 +941,10 @@ export async function updateMovieEntry(
 
 export async function reorderMovieRankings(
   orderedMovieIds: string[],
+  requestHeaders: Headers,
 ): Promise<{ status: "error" | "success"; message: string | null }> {
   const session = await auth.api.getSession({
-    headers: await headers(),
+    headers: requestHeaders,
   });
 
   if (!session?.user?.id) {
@@ -1010,10 +1001,7 @@ export async function reorderMovieRankings(
     };
   }
 
-  revalidatePath("/movies");
-  revalidatePath("/charts");
-  revalidatePath("/");
-
+      
   return {
     status: "success",
     message: null,
@@ -1022,8 +1010,9 @@ export async function reorderMovieRankings(
 
 export async function searchTmdbMovieMatches(
   movieId: string,
+  requestHeaders: Headers,
 ): Promise<TmdbSearchResult> {
-  const authorized = await requireSuperadmin();
+  const authorized = await requireSuperadmin(requestHeaders);
 
   if (authorized.status === "error") {
     return {
@@ -1068,9 +1057,10 @@ export async function searchTmdbMovieMatches(
 
 export async function searchTmdbMovieMatchesByTitle(
   query: string,
+  requestHeaders: Headers,
 ): Promise<TmdbSearchResult> {
   const session = await auth.api.getSession({
-    headers: await headers(),
+    headers: requestHeaders,
   });
 
   if (!session?.user?.id) {
@@ -1111,8 +1101,9 @@ export async function searchTmdbMovieMatchesByTitle(
 export async function syncMovieMetadata(
   movieId: string,
   tmdbId: number,
+  requestHeaders: Headers,
 ): Promise<MovieActionResult> {
-  const authorized = await requireSuperadmin();
+  const authorized = await requireSuperadmin(requestHeaders);
 
   if (authorized.status === "error") {
     return {
@@ -1159,11 +1150,7 @@ export async function syncMovieMetadata(
     };
   }
 
-  revalidatePath("/movies");
-  revalidatePath("/charts");
-  revalidatePath(`/movies/${movieId}`);
-  revalidatePath("/");
-
+        
   return {
     status: "success",
     message: "Movie metadata synced.",
@@ -1172,8 +1159,9 @@ export async function syncMovieMetadata(
 
 export async function resyncMovieMetadata(
   movieId: string,
+  requestHeaders: Headers,
 ): Promise<MovieActionResult> {
-  const authorized = await requireSuperadmin();
+  const authorized = await requireSuperadmin(requestHeaders);
 
   if (authorized.status === "error") {
     return {
@@ -1203,5 +1191,5 @@ export async function resyncMovieMetadata(
     };
   }
 
-  return syncMovieMetadata(movieId, movie.tmdbId);
+  return syncMovieMetadata(movieId, movie.tmdbId, requestHeaders);
 }

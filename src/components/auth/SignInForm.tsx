@@ -1,8 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { startTransition, useState } from "react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +21,6 @@ const INITIAL_STATE: FormState = {
 };
 
 export function SignInForm({ signupsEnabled }: SignInFormProps) {
-  const router = useRouter();
   const [form, setForm] = useState(INITIAL_STATE);
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
@@ -46,10 +43,7 @@ export function SignInForm({ signupsEnabled }: SignInFormProps) {
       return;
     }
 
-    startTransition(() => {
-      router.push("/movies");
-      router.refresh();
-    });
+    window.location.assign("/movies");
   }
 
   return (
@@ -112,12 +106,12 @@ export function SignInForm({ signupsEnabled }: SignInFormProps) {
           {signupsEnabled ? (
             <p>
               Need an account?{" "}
-              <Link
+              <a
                 href="/sign-up"
                 className="text-[var(--foreground)] underline underline-offset-4"
               >
                 Create one
-              </Link>
+              </a>
             </p>
           ) : (
             <p>Account creation is currently disabled.</p>

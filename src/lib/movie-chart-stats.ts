@@ -1,5 +1,3 @@
-import "server-only";
-
 import { and, asc, eq, inArray, lte } from "drizzle-orm";
 
 import { db } from "@/db";

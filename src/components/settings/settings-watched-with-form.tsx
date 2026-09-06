@@ -2,7 +2,8 @@
 
 import { startTransition, useId, useState, type FormEvent } from "react";
 
-import { updateDefaultWatchedWith } from "@/app/settings/actions";
+import { actions } from "astro:actions";
+import { getActionData } from "@/lib/action-result";
 import { WatchedWithCombobox } from "@/components/movies/WatchedWithCombobox";
 import { Button } from "@/components/ui/button";
 
@@ -40,7 +41,7 @@ export function SettingsWatchedWithForm({
     });
 
     startTransition(async () => {
-      const nextState = await updateDefaultWatchedWith(formData);
+      const nextState = await getActionData(actions.updateDefaultWatchedWith(formData));
 
       setState(nextState);
       setPending(false);

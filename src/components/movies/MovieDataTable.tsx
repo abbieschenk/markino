@@ -31,7 +31,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { reorderMovieRankings } from "@/app/movies/actions";
+import { actions } from "astro:actions";
+import { getActionData } from "@/lib/action-result";
 import type { MovieLedgerEntry, WatchStatus } from "@/lib/movies";
 import { cn } from "@/lib/utils";
 
@@ -220,11 +221,11 @@ export function MovieDataTable({
 
     startTransition(async () => {
       try {
-        const result = await reorderMovieRankings(
-          [...nextData]
+        const result = await getActionData(actions.reorderMovieRankings({
+          movieIds: [...nextData]
             .sort((left, right) => left.rank - right.rank)
             .map((entry) => entry.movieId),
-        );
+        }));
 
         if (result.status === "error") {
           setTableData(previousData);

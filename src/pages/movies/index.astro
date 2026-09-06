@@ -1,0 +1,23 @@
+---
+import BaseLayout from "@/layouts/base-layout.astro";
+import { MoviesScreenIsland } from "@/components/movies/movies-screen-island";
+import { getMovieScreenData } from "@/server/movie-page-data";
+
+const user = Astro.locals.user;
+
+if (!user?.id) {
+  return Astro.redirect("/sign-in");
+}
+
+const movieScreenData = await getMovieScreenData(user.id);
+---
+
+<BaseLayout title="Movies">
+  <MoviesScreenIsland
+    client:load
+    canSyncMetadata={user.role === "superadmin"}
+    data={movieScreenData.movieLedger}
+    defaultWatchedWith={movieScreenData.defaultWatchedWith}
+    watchedWithOptions={movieScreenData.watchedWithOptions}
+  />
+</BaseLayout>

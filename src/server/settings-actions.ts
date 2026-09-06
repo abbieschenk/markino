@@ -1,7 +1,3 @@
-"use server";
-
-import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
@@ -15,9 +11,10 @@ type SettingsActionResult = {
 
 export async function updateDefaultWatchedWith(
   formData: FormData,
+  requestHeaders: Headers,
 ): Promise<SettingsActionResult> {
   const session = await auth.api.getSession({
-    headers: await headers(),
+    headers: requestHeaders,
   });
 
   if (!session?.user?.id) {
@@ -75,10 +72,7 @@ export async function updateDefaultWatchedWith(
     };
   }
 
-  revalidatePath("/settings");
-  revalidatePath("/movies");
-  revalidatePath("/");
-
+      
   return {
     status: "success",
     message: "Settings saved.",

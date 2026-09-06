@@ -1,0 +1,32 @@
+import { asc, eq, ne } from "drizzle-orm";
+
+import { db } from "@/db";
+import { userDefaultWatchParticipants, users } from "@/db/schema";
+import { getMovieLedgerForUser } from "@/lib/movies";
+
+export async function getMovieScreenData(userId: string) {
+  const [movieLedger, watchedWithOptions, defaultWatchedWith] =
+    await Promise.all([
+      getMovieLedgerForUser(userId),
+      db
+        .select({ handle: users.handle })
+        .from(users)
+        .where(ne(users.id, userId))
+        .orderBy(asc(users.handle)),
+      db
+        .select({ handle: users.handle })
+        .from(userDefaultWatchParticipants)
+        .innerJoin(
+          users,
+          eq(userDefaultWatchParticipants.participantUserId, users.id),
+        )
+        .where(eq(userDefaultWatchParticipants.userId, userId))
+        .orderBy(asc(users.handle)),
+    ]);
+
+  return {
+    defaultWatchedWith: defaultWatchedWith.map((user) => user.handle),
+    movieLedger,
+    watchedWithOptions: watchedWithOptions.map((user) => user.handle),
+  };
+}

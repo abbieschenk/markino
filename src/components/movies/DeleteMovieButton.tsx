@@ -1,10 +1,10 @@
 "use client";
 
 import { X } from "@phosphor-icons/react";
-import { useRouter } from "next/navigation";
 import { startTransition, useState } from "react";
 
-import { deleteMovieEntry } from "@/app/movies/actions";
+import { actions } from "astro:actions";
+import { getActionData } from "@/lib/action-result";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,7 +24,6 @@ export function DeleteMovieButton({
   title,
   watchEntryId,
 }: DeleteMovieButtonProps) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +33,9 @@ export function DeleteMovieButton({
     setError(null);
 
     startTransition(async () => {
-      const result = await deleteMovieEntry(watchEntryId);
+      const result = await getActionData(
+        actions.deleteMovieEntry({ watchEntryId }),
+      );
 
       setPending(false);
 
@@ -44,7 +45,7 @@ export function DeleteMovieButton({
       }
 
       setOpen(false);
-      router.refresh();
+      window.location.reload();
     });
   }
 

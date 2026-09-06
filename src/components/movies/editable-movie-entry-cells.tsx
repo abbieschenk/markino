@@ -1,12 +1,11 @@
 "use client";
 
 import { Check, X } from "@phosphor-icons/react";
-import { useRouter } from "next/navigation";
 import { startTransition, useId, useState } from "react";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { toast } from "sonner";
 
-import { updateMovieEntry } from "@/app/movies/actions";
+import { actions } from "astro:actions";
 import { DatePickerField } from "@/components/movies/DatePickerField";
 import { WatchedWithCombobox } from "@/components/movies/WatchedWithCombobox";
 import { Button } from "@/components/ui/button";
@@ -23,6 +22,7 @@ import type {
   MovieWatchEntry,
   WatchDatePrecision,
 } from "@/lib/movies";
+import { getActionData } from "@/lib/action-result";
 import { cn } from "@/lib/utils";
 
 export type EditableMovieEntryField = "watchedOn" | "language" | "watchedWith";
@@ -200,7 +200,6 @@ export function MovieEntryEditPanel({
   watchedWithOptions: string[];
   onCancel: () => void;
 }) {
-  const router = useRouter();
   const fieldId = useId();
   const [draftText, setDraftText] = useState(target.entry.language);
   const [draftWatchedOn, setDraftWatchedOn] = useState(
@@ -243,7 +242,8 @@ export function MovieEntryEditPanel({
 
     startTransition(async () => {
       try {
-        const result = await updateMovieEntry(
+        const result = await getActionData(
+          actions.updateMovieEntry(
           buildUpdateInput(target.entry, {
             language: target.field === "language" ? nextTextValue : undefined,
             watchedOn:
@@ -253,6 +253,7 @@ export function MovieEntryEditPanel({
             watchedWith:
               target.field === "watchedWith" ? draftWatchedWith : undefined,
           }),
+          ),
         );
 
         if (result.status === "error") {
@@ -261,7 +262,7 @@ export function MovieEntryEditPanel({
         }
 
         onCancel();
-        router.refresh();
+        window.location.reload();
       } catch (error) {
         console.error("Failed to update movie entry", error);
         toast.error("Unable to update the movie entry.");

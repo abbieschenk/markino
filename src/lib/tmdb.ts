@@ -1,4 +1,4 @@
-import "server-only";
+import "@/lib/load-env";
 
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 

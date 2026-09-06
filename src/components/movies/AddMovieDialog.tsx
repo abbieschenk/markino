@@ -3,7 +3,8 @@
 import { Plus, Trash } from "@phosphor-icons/react";
 import { startTransition, useId, useRef, useState } from "react";
 
-import { addMovieEntry } from "@/app/movies/actions";
+import { actions } from "astro:actions";
+import { getActionData } from "@/lib/action-result";
 import { DatePickerField } from "@/components/movies/DatePickerField";
 import { MovieTitleSearchField } from "@/components/movies/movie-title-search-field";
 import { WatchedWithCombobox } from "@/components/movies/WatchedWithCombobox";
@@ -171,7 +172,7 @@ export function AddMovieDialog({
     });
 
     startTransition(async () => {
-      const nextState = await addMovieEntry(formData);
+      const nextState = await getActionData(actions.addMovieEntry(formData));
 
       setState(nextState);
       setPending(false);
