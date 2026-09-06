@@ -249,6 +249,16 @@ export const movieCredits = pgTable(
   },
   (table) => [
     index("movie_credits_movie_id_idx").on(table.movieId),
+    index("movie_credits_movie_type_job_idx").on(
+      table.movieId,
+      table.creditType,
+      table.job,
+    ),
+    index("movie_credits_movie_type_order_idx").on(
+      table.movieId,
+      table.creditType,
+      table.creditOrder,
+    ),
     index("movie_credits_person_id_idx").on(table.personId),
   ],
 );
@@ -279,6 +289,10 @@ export const watchEntries = pgTable(
   },
   (table) => [
     index("watch_entries_user_id_idx").on(table.userId),
+    index("watch_entries_user_watched_on_idx").on(
+      table.userId,
+      table.watchedOn,
+    ),
     index("watch_entries_movie_id_idx").on(table.movieId),
     index("watch_entries_watched_on_idx").on(table.watchedOn),
   ],
@@ -304,6 +318,10 @@ export const watchEntryParticipants = pgTable(
       table.userId,
     ),
     index("watch_entry_participants_user_id_idx").on(table.userId),
+    index("watch_entry_participants_user_entry_idx").on(
+      table.userId,
+      table.watchEntryId,
+    ),
   ],
 );
 

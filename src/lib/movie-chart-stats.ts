@@ -1,11 +1,16 @@
 import { and, asc, eq, inArray, lte } from "drizzle-orm";
 
 import { db } from "@/db";
-import { genres, movieCredits, movieGenres, movies, people } from "@/db/schema";
 import {
-  getMovieLedgerFromVisibleEntries,
-  getVisibleWatchEntriesForUser,
-} from "@/lib/movies";
+  genres,
+  movieCredits,
+  movieGenres,
+  movieRankings,
+  movies,
+  people,
+  watchEntryParticipants,
+  watchEntries,
+} from "@/db/schema";
 
 export type MonthlyWatchedCount = {
   month: string;
@@ -70,6 +75,189 @@ type MovieTooltipEntry = {
   watchedYear?: number;
   watchedDatePrecision?: "day" | "year";
 };
+
+type ChartWatchEntry = {
+  id: string;
+  movieId: string;
+  watchedOn: string;
+  watchedDatePrecision: "day" | "year";
+  movie: {
+    title: string;
+    releaseYear: number | null;
+    budget: number | null;
+    revenue: number | null;
+  };
+};
+
+async function getOwnedChartWatchEntries(userId: string) {
+  return db.query.watchEntries.findMany({
+    where: eq(watchEntries.userId, userId),
+    columns: {
+      id: true,
+      movieId: true,
+      watchedOn: true,
+      watchedDatePrecision: true,
+    },
+    with: {
+      movie: {
+        columns: {
+          title: true,
+          releaseYear: true,
+          budget: true,
+          revenue: true,
+        },
+      },
+    },
+  });
+}
+
+async function getParticipantChartWatchEntries(userId: string) {
+  return db.query.watchEntryParticipants.findMany({
+    where: eq(watchEntryParticipants.userId, userId),
+    columns: {
+      watchEntryId: true,
+    },
+    with: {
+      watchEntry: {
+        columns: {
+          id: true,
+          movieId: true,
+          watchedOn: true,
+          watchedDatePrecision: true,
+        },
+        with: {
+          movie: {
+            columns: {
+              title: true,
+              releaseYear: true,
+              budget: true,
+              revenue: true,
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+async function getVisibleChartWatchEntriesForUser(
+  userId: string,
+): Promise<ChartWatchEntry[]> {
+  const ownedEntries = await getOwnedChartWatchEntries(userId);
+  const participantLinks = await getParticipantChartWatchEntries(userId);
+  const entriesById = new Map<string, ChartWatchEntry>();
+
+  for (const entry of ownedEntries) {
+    entriesById.set(entry.id, entry);
+  }
+
+  for (const participantLink of participantLinks) {
+    entriesById.set(
+      participantLink.watchEntry.id,
+      participantLink.watchEntry,
+    );
+  }
+
+  return Array.from(entriesById.values());
+}
+
+async function getRankByMovieId(userId: string, movieIds: string[]) {
+  if (movieIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const rankings = await db.query.movieRankings.findMany({
+    where: and(
+      eq(movieRankings.userId, userId),
+      inArray(movieRankings.movieId, movieIds),
+    ),
+    columns: {
+      movieId: true,
+      rank: true,
+    },
+  });
+
+  return new Map(rankings.map((ranking) => [ranking.movieId, ranking.rank]));
+}
+
+function compareChartWatchEntriesNewestFirst(
+  left: ChartWatchEntry,
+  right: ChartWatchEntry,
+) {
+  const leftWatchedYear = getWatchedYear(left.watchedOn);
+  const rightWatchedYear = getWatchedYear(right.watchedOn);
+
+  if (leftWatchedYear !== rightWatchedYear) {
+    return rightWatchedYear - leftWatchedYear;
+  }
+
+  if (
+    left.watchedDatePrecision === "day" &&
+    right.watchedDatePrecision === "day" &&
+    left.watchedOn !== right.watchedOn
+  ) {
+    return right.watchedOn.localeCompare(left.watchedOn);
+  }
+
+  if (left.watchedDatePrecision !== right.watchedDatePrecision) {
+    return left.watchedDatePrecision === "day" ? -1 : 1;
+  }
+
+  return right.id.localeCompare(left.id, "en");
+}
+
+function selectChartEntriesByMovie(entries: ChartWatchEntry[]) {
+  const entriesByMovieId = new Map<string, ChartWatchEntry>();
+
+  for (const entry of entries) {
+    const currentEntry = entriesByMovieId.get(entry.movieId);
+
+    if (
+      !currentEntry ||
+      compareChartWatchEntriesNewestFirst(entry, currentEntry) < 0
+    ) {
+      entriesByMovieId.set(entry.movieId, entry);
+    }
+  }
+
+  return Array.from(entriesByMovieId.values());
+}
+
+async function getChartRankByMovieId(userId: string, entries: ChartWatchEntry[]) {
+  const summaryEntries = selectChartEntriesByMovie(entries);
+  const persistedRankByMovieId = await getRankByMovieId(
+    userId,
+    summaryEntries.map((entry) => entry.movieId),
+  );
+  const sortedEntries = [...summaryEntries].sort((left, right) => {
+    const leftRank = persistedRankByMovieId.get(left.movieId);
+    const rightRank = persistedRankByMovieId.get(right.movieId);
+
+    if (leftRank != null && rightRank != null && leftRank !== rightRank) {
+      return leftRank - rightRank;
+    }
+
+    if (leftRank != null) {
+      return -1;
+    }
+
+    if (rightRank != null) {
+      return 1;
+    }
+
+    const watchedDateSort = compareChartWatchEntriesNewestFirst(left, right);
+
+    if (watchedDateSort !== 0) {
+      return watchedDateSort;
+    }
+
+    return left.movie.title.localeCompare(right.movie.title, "en");
+  });
+
+  return new Map(
+    sortedEntries.map((entry, index) => [entry.movieId, index + 1]),
+  );
+}
 
 function getWatchedYear(watchedOn: string) {
   return Number(watchedOn.slice(0, 4));
@@ -146,7 +334,7 @@ function getAllWatchedYears(watchedYears: Iterable<number>) {
 }
 
 function getWatchedByMonth(
-  entries: Awaited<ReturnType<typeof getVisibleWatchEntriesForUser>>,
+  entries: ChartWatchEntry[],
 ) {
   const monthFormatter = new Intl.DateTimeFormat("en", { month: "short" });
   const exactDateEntries = entries.filter(
@@ -420,7 +608,7 @@ async function getTopActors(
 }
 
 async function getGenreStats(
-  visibleEntries: Awaited<ReturnType<typeof getVisibleWatchEntriesForUser>>,
+  visibleEntries: ChartWatchEntry[],
   monthlyWatched: MonthlyWatchedCount[],
   yearlyWatched: YearlyWatchedCount[],
   movieTitleById: Map<string, string>,
@@ -504,12 +692,12 @@ function buildGenreOverTime({
   getBucketKey,
 }: {
   buckets: { key: string; label: string }[];
-  entries: Awaited<ReturnType<typeof getVisibleWatchEntriesForUser>>;
+  entries: ChartWatchEntry[];
   genresByMovieId: Map<string, Set<string>>;
   timelineGenres: string[];
   timelineGenreSet: Set<string>;
   getBucketKey: (
-    entry: Awaited<ReturnType<typeof getVisibleWatchEntriesForUser>>[number],
+    entry: ChartWatchEntry,
   ) => string | null;
 }) {
   const moviesByBucketAndGenre = new Map<
@@ -574,15 +762,14 @@ function buildMovieMoneyOverTime({
   getBucketKey,
 }: {
   buckets: { key: string; label: string }[];
-  entries: Awaited<ReturnType<typeof getVisibleWatchEntriesForUser>>;
+  entries: ChartWatchEntry[];
   getBucketKey: (
-    entry: Awaited<ReturnType<typeof getVisibleWatchEntriesForUser>>[number],
+    entry: ChartWatchEntry,
   ) => string | null;
 }) {
-  const entriesByBucket = new Map<
-    string,
-    Awaited<ReturnType<typeof getVisibleWatchEntriesForUser>>
-  >(buckets.map((bucket) => [bucket.key, []]));
+  const entriesByBucket = new Map<string, ChartWatchEntry[]>(
+    buckets.map((bucket) => [bucket.key, []]),
+  );
 
   for (const entry of entries) {
     const bucketKey = getBucketKey(entry);
@@ -631,14 +818,11 @@ function buildMovieMoneyOverTime({
 export async function getMovieChartStatsForUser(
   userId: string,
 ): Promise<MovieChartStats> {
-  const visibleEntries = await getVisibleWatchEntriesForUser(userId);
-  const rankedLedger = await getMovieLedgerFromVisibleEntries(
-    userId,
-    visibleEntries,
+  const visibleEntries = await getVisibleChartWatchEntriesForUser(userId);
+  const visibleMovieIds = Array.from(
+    new Set(visibleEntries.map((entry) => entry.movieId)),
   );
-  const rankByMovieId = new Map(
-    rankedLedger.map((entry) => [entry.movieId, entry.rank]),
-  );
+  const rankByMovieId = await getChartRankByMovieId(userId, visibleEntries);
   const exactDateEntries = visibleEntries.filter(
     (entry) => entry.watchedDatePrecision === "day",
   );
@@ -695,9 +879,6 @@ export async function getMovieChartStatsForUser(
     }
   }
 
-  const visibleMovieIds = Array.from(
-    new Set(visibleEntries.map((entry) => entry.movieId)),
-  );
   const movieTitleById = new Map(
     visibleEntries.map((entry) => [entry.movieId, entry.movie.title]),
   );
