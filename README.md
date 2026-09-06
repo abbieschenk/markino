@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Markino
 
-## Getting Started
+Markino is a local-network movie watch and ranking app built with Next.js, Drizzle, Better Auth, and Postgres.
 
-First, run the development server:
+## Setup
+
+Install dependencies:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Create or start the local Postgres database, then run the existing Drizzle migrations:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+pnpm run db:setup
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Set the app environment variables in `.env.local`:
 
-## Learn More
+```bash
+DATABASE_URL=postgres://markino:markino@localhost:54322/markino
+BETTER_AUTH_SECRET=replace-with-a-random-32-plus-character-secret
+TMDB_ACCESS_TOKEN=replace-with-your-tmdb-read-access-token
+```
 
-To learn more about Next.js, take a look at the following resources:
+Start the development server:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Open [http://localhost:3000](http://localhost:3000).
 
-## Deploy on Vercel
+## Local Database
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`pnpm run db:local` creates or starts a Docker-backed Postgres database with Docker Compose.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Defaults:
+
+```bash
+DATABASE_URL=postgres://markino:markino@localhost:54322/markino
+```
+
+The Compose setup is non-destructive. Data is stored in the persistent Docker volume `markino-postgres-data`, so restarting the container keeps existing data.
+
+To change the local database defaults, update `docker-compose.yml` and keep `.env.local` in sync before running `pnpm run db:local`:
+
+```bash
+DATABASE_URL=postgres://markino:markino@localhost:54322/markino
+```
+
+Deployed environments should set `DATABASE_URL` to any valid Postgres connection string.

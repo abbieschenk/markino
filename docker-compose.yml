@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: markino-postgres
+    ports:
+      - "127.0.0.1:54322:5432"
+    environment:
+      POSTGRES_DB: markino
+      POSTGRES_USER: markino
+      POSTGRES_PASSWORD: markino
+    volumes:
+      - markino-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U markino -d markino"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+volumes:
+  markino-postgres-data:

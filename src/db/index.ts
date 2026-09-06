@@ -1,6 +1,6 @@
 import "server-only";
-import { Pool } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-serverless";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import * as schema from "@/db/schema";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -9,10 +9,8 @@ if (!databaseUrl) {
   throw new Error("DATABASE_URL is not set.");
 }
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL!,
-});
+const client = postgres(databaseUrl);
 
-export const db = drizzle(pool, { schema });
+export const db = drizzle(client, { schema });
 
 export { schema };
