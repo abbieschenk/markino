@@ -11,6 +11,8 @@ Markino is a quiet, dense movie watch/ranking app for personal and collaborative
 
 Markino lets users log movies they have watched and rank them in a dense table view.
 
+Markino is meant to run on a local network. It will never be deployed externally. 
+
 - Log movies watched, including:
   - Title of Movie
   - Date watched
@@ -45,7 +47,7 @@ The persisted preference order should not be lost when temporary table sorting/f
 - shadcn, incl. shadcn Data Table
 - Better Auth
 - Drizzle ORM
-- Neon Postgres
+- Postgres
 - Vercel
 
 ## Design Decisions
