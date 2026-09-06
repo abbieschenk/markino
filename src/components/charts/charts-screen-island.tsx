@@ -15,7 +15,7 @@ type ChartsScreenIslandProps = {
 
 export function ChartsScreenIsland({ stats }: ChartsScreenIslandProps) {
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
+    <div className="grid gap-4 lg:grid-cols-2">
       <WatchedOverTimeChart
         monthlyData={stats.monthlyWatched}
         yearlyData={stats.yearlyWatched}
