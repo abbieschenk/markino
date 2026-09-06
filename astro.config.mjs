@@ -9,6 +9,9 @@ export default defineConfig({
   integrations: [react()],
   output: "server",
   vite: {
+    optimizeDeps: {
+      include: ["recharts"],
+    },
     resolve: {
       alias: {
         "@": new URL("./src", import.meta.url).pathname,
