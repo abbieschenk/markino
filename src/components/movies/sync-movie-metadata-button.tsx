@@ -22,12 +22,14 @@ type TmdbMatch = TmdbMovieMatch;
 type SyncMovieMetadataButtonProps = {
   movieId: string;
   title: string;
+  userId: string;
   display?: "label" | "icon";
 };
 
 export function SyncMovieMetadataButton({
   movieId,
   title,
+  userId,
   display = "label",
 }: SyncMovieMetadataButtonProps) {
   const [open, setOpen] = useState(false);
@@ -46,7 +48,7 @@ export function SyncMovieMetadataButton({
     startTransition(async () => {
       try {
         const result = await getActionData(
-          actions.searchTmdbMovieMatches({ movieId }),
+          actions.searchTmdbMovieMatches({ movieId, userId }),
         );
 
         if (result.status === "error") {
@@ -85,7 +87,7 @@ export function SyncMovieMetadataButton({
     startTransition(async () => {
       try {
         const result = await getActionData(
-          actions.syncMovieMetadata({ movieId, tmdbId: selectedTmdbId }),
+          actions.syncMovieMetadata({ movieId, tmdbId: selectedTmdbId, userId }),
         );
 
         if (result.status === "error") {

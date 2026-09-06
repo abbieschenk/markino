@@ -39,6 +39,7 @@ import { cn } from "@/lib/utils";
 type MovieDataTableProps = {
   columns: ColumnDef<MovieLedgerEntry>[];
   data: MovieLedgerEntry[];
+  userId: string;
   renderExpandedRow?: (entry: MovieLedgerEntry) => ReactNode;
   toolbarActions?: ReactNode;
 };
@@ -109,6 +110,7 @@ function moveMovieInRankOrder(
 export function MovieDataTable({
   columns,
   data,
+  userId,
   renderExpandedRow,
   toolbarActions,
 }: MovieDataTableProps) {
@@ -225,6 +227,7 @@ export function MovieDataTable({
           movieIds: [...nextData]
             .sort((left, right) => left.rank - right.rank)
             .map((entry) => entry.movieId),
+          userId,
         }));
 
         if (result.status === "error") {

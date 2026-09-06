@@ -1,14 +1,13 @@
 ---
-import { AuthNav } from "@/components/auth/AuthNav";
-import { areSignupsEnabled } from "@/lib/auth-config";
+import { ProfileSwitcher } from "@/components/profiles/profile-switcher";
+import { listLocalProfiles } from "@/lib/local-profiles";
 
-const signupsEnabled = areSignupsEnabled();
-const links = Astro.locals.user
-  ? [
-      { href: "/movies", label: "Movies" },
-      { href: "/charts", label: "Charts" },
-    ]
-  : [{ href: "/", label: "Overview" }];
+const profiles = await listLocalProfiles();
+const links = [
+  { href: "/movies", label: "Movies" },
+  { href: "/charts", label: "Charts" },
+  { href: "/settings", label: "Settings" },
+];
 ---
 
 <header class="sticky top-0 z-10 border-b border-[var(--border)] bg-[color:color-mix(in_srgb,var(--background)_92%,white)] backdrop-blur">
@@ -30,7 +29,11 @@ const links = Astro.locals.user
           </a>
         ))}
       </nav>
-      <AuthNav client:load signupsEnabled={signupsEnabled} />
+      <ProfileSwitcher
+        client:load
+        currentUser={Astro.locals.user}
+        profiles={profiles}
+      />
     </div>
   </div>
 </header>

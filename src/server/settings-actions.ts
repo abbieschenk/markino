@@ -2,7 +2,7 @@ import { eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import { userDefaultWatchParticipants, users } from "@/db/schema";
-import { auth } from "@/lib/auth";
+import { getLocalProfileById } from "@/lib/local-profiles";
 
 type SettingsActionResult = {
   status: "idle" | "error" | "success";
@@ -11,16 +11,13 @@ type SettingsActionResult = {
 
 export async function updateDefaultWatchedWith(
   formData: FormData,
-  requestHeaders: Headers,
 ): Promise<SettingsActionResult> {
-  const session = await auth.api.getSession({
-    headers: requestHeaders,
-  });
+  const profile = await getLocalProfileById(String(formData.get("userId") ?? ""));
 
-  if (!session?.user?.id) {
+  if (!profile) {
     return {
       status: "error",
-      message: "You must be signed in to update settings.",
+      message: "Select a profile to update settings.",
     };
   }
 
@@ -31,7 +28,7 @@ export async function updateDefaultWatchedWith(
         .map((value) => String(value).trim().toLowerCase())
         .filter(Boolean),
     ),
-  ).filter((handle) => handle !== session.user.handle);
+  ).filter((handle) => handle !== profile.handle);
 
   const participantUsers =
     handles.length > 0
@@ -52,12 +49,12 @@ export async function updateDefaultWatchedWith(
     await db.transaction(async (tx) => {
       await tx
         .delete(userDefaultWatchParticipants)
-        .where(eq(userDefaultWatchParticipants.userId, session.user.id));
+        .where(eq(userDefaultWatchParticipants.userId, profile.id));
 
       if (participantUsers.length > 0) {
         await tx.insert(userDefaultWatchParticipants).values(
           participantUsers.map((user) => ({
-            userId: session.user.id,
+            userId: profile.id,
             participantUserId: user.id,
           })),
         );

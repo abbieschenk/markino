@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 
 type SettingsWatchedWithFormProps = {
   defaultWatchedWith: string[];
+  userId: string;
   watchedWithOptions: string[];
 };
 
@@ -19,6 +20,7 @@ type SettingsActionState = {
 
 export function SettingsWatchedWithForm({
   defaultWatchedWith,
+  userId,
   watchedWithOptions,
 }: SettingsWatchedWithFormProps) {
   const [pending, setPending] = useState(false);
@@ -33,6 +35,7 @@ export function SettingsWatchedWithForm({
     event.preventDefault();
 
     const formData = new FormData(event.currentTarget);
+    formData.set("userId", userId);
 
     setPending(true);
     setState({

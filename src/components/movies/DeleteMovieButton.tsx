@@ -17,11 +17,13 @@ import {
 
 type DeleteMovieButtonProps = {
   title: string;
+  userId: string;
   watchEntryId: string;
 };
 
 export function DeleteMovieButton({
   title,
+  userId,
   watchEntryId,
 }: DeleteMovieButtonProps) {
   const [open, setOpen] = useState(false);
@@ -34,7 +36,7 @@ export function DeleteMovieButton({
 
     startTransition(async () => {
       const result = await getActionData(
-        actions.deleteMovieEntry({ watchEntryId }),
+        actions.deleteMovieEntry({ userId, watchEntryId }),
       );
 
       setPending(false);

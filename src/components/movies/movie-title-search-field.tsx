@@ -18,6 +18,7 @@ type MovieTitleSearchFieldProps = {
   id: string;
   titleName: string;
   tmdbIdName: string;
+  userId: string;
   portalContainer?: HTMLElement | null;
   required?: boolean;
   ariaLabel: string;
@@ -33,6 +34,7 @@ export function MovieTitleSearchField({
   id,
   titleName,
   tmdbIdName,
+  userId,
   portalContainer,
   required = false,
   ariaLabel,
@@ -65,7 +67,7 @@ export function MovieTitleSearchField({
       startTransition(async () => {
         try {
           const result = await getActionData(
-            actions.searchTmdbMovieMatchesByTitle({ title: query }),
+            actions.searchTmdbMovieMatchesByTitle({ title: query, userId }),
           );
 
           if (requestIdRef.current !== currentRequestId) {
@@ -96,7 +98,7 @@ export function MovieTitleSearchField({
     }, SEARCH_DEBOUNCE_MS);
 
     return () => window.clearTimeout(timeoutId);
-  }, [selectedMatch, title]);
+  }, [selectedMatch, title, userId]);
 
   useEffect(() => {
     if (!focused) {

@@ -68,6 +68,7 @@ function getEditPanelAnchor(
 
 function buildUpdateInput(
   entry: EditableMovieEntry,
+  userId: string,
   updates: Partial<
     Pick<
       MovieLedgerEntry,
@@ -76,6 +77,7 @@ function buildUpdateInput(
   >,
 ) {
   return {
+    userId,
     watchEntryId: entry.watchEntryId,
     watchedOn: updates.watchedOn ?? entry.watchedOn,
     watchedDatePrecision:
@@ -193,10 +195,12 @@ function getFieldLabel(field: EditableMovieEntryField) {
 
 export function MovieEntryEditPanel({
   target,
+  userId,
   watchedWithOptions,
   onCancel,
 }: {
   target: MovieEntryEditTarget;
+  userId: string;
   watchedWithOptions: string[];
   onCancel: () => void;
 }) {
@@ -244,7 +248,7 @@ export function MovieEntryEditPanel({
       try {
         const result = await getActionData(
           actions.updateMovieEntry(
-          buildUpdateInput(target.entry, {
+          buildUpdateInput(target.entry, userId, {
             language: target.field === "language" ? nextTextValue : undefined,
             watchedOn:
               target.field === "watchedOn" ? nextWatchedValue : undefined,

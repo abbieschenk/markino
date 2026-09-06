@@ -1,23 +1,26 @@
 ---
 import BaseLayout from "@/layouts/base-layout.astro";
 import { MoviesScreenIsland } from "@/components/movies/movies-screen-island";
+import { ProfileSelectionPanel } from "@/components/profiles/profile-selection-panel";
+import { listLocalProfiles } from "@/lib/local-profiles";
 import { getMovieScreenData } from "@/server/movie-page-data";
 
 const user = Astro.locals.user;
-
-if (!user?.id) {
-  return Astro.redirect("/sign-in");
-}
-
-const movieScreenData = await getMovieScreenData(user.id);
+const profiles = user?.id ? [] : await listLocalProfiles();
+const movieScreenData = user?.id ? await getMovieScreenData(user.id) : null;
 ---
 
 <BaseLayout title="Movies">
-  <MoviesScreenIsland
-    client:load
-    canSyncMetadata={user.role === "superadmin"}
-    data={movieScreenData.movieLedger}
-    defaultWatchedWith={movieScreenData.defaultWatchedWith}
-    watchedWithOptions={movieScreenData.watchedWithOptions}
-  />
+  {user?.id && movieScreenData ? (
+    <MoviesScreenIsland
+      client:load
+      canSyncMetadata={user.role === "superadmin"}
+      data={movieScreenData.movieLedger}
+      defaultWatchedWith={movieScreenData.defaultWatchedWith}
+      userId={user.id}
+      watchedWithOptions={movieScreenData.watchedWithOptions}
+    />
+  ) : (
+    <ProfileSelectionPanel client:load profiles={profiles} />
+  )}
 </BaseLayout>

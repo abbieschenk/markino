@@ -37,11 +37,13 @@ export async function MoviesScreen({
     <MovieLedger
       data={movieLedger}
       canSyncMetadata={canSyncMetadata}
+      userId={userId}
       watchedWithOptions={watchedWithOptions.map((user) => user.handle)}
       toolbarActions={
         <AddMovieDialog
           canAdd
           defaultWatchedWith={defaultWatchedWith.map((user) => user.handle)}
+          userId={userId}
           watchedWithOptions={watchedWithOptions.map((user) => user.handle)}
         />
       }

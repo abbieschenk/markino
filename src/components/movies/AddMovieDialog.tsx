@@ -29,6 +29,7 @@ import {
 type AddMovieDialogProps = {
   canAdd: boolean;
   defaultWatchedWith: string[];
+  userId: string;
   watchedWithOptions: string[];
 };
 
@@ -88,6 +89,7 @@ function createMovieFormRowFromPrevious(
 export function AddMovieDialog({
   canAdd,
   defaultWatchedWith,
+  userId,
   watchedWithOptions,
 }: AddMovieDialogProps) {
   const nextRowIdRef = useRef(1);
@@ -164,6 +166,7 @@ export function AddMovieDialog({
 
     const formElement = event.currentTarget;
     const formData = new FormData(formElement);
+    formData.set("userId", userId);
 
     setPending(true);
     setState({
@@ -261,6 +264,7 @@ export function AddMovieDialog({
                         titleName={`title:${row.id}`}
                         tmdbIdName={`tmdbId:${row.id}`}
                         portalContainer={comboboxLayerElement}
+                        userId={userId}
                         required
                         ariaLabel={`Row ${index + 1} title`}
                       />

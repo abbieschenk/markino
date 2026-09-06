@@ -1,29 +1,32 @@
 ---
 import BaseLayout from "@/layouts/base-layout.astro";
+import { ProfileSelectionPanel } from "@/components/profiles/profile-selection-panel";
 import { SettingsWatchedWithForm } from "@/components/settings/settings-watched-with-form";
+import { listLocalProfiles } from "@/lib/local-profiles";
 import { getSettingsPageData } from "@/server/settings-page-data";
 
 const user = Astro.locals.user;
-
-if (!user?.id) {
-  return Astro.redirect("/sign-in");
-}
-
-const settingsData = await getSettingsPageData(user.id);
+const profiles = user?.id ? [] : await listLocalProfiles();
+const settingsData = user?.id ? await getSettingsPageData(user.id) : null;
 ---
 
 <BaseLayout title="Settings">
-  <section class="space-y-6">
-    <header class="space-y-2">
-      <h1 class="text-2xl font-medium tracking-[-0.03em]">Settings</h1>
-      <p class="max-w-2xl text-sm text-[var(--muted-foreground)]">
-        Defaults used when adding new movie entries.
-      </p>
-    </header>
-    <SettingsWatchedWithForm
-      client:load
-      defaultWatchedWith={settingsData.defaultWatchedWith}
-      watchedWithOptions={settingsData.watchedWithOptions}
-    />
-  </section>
+  {user?.id && settingsData ? (
+    <section class="space-y-6">
+      <header class="space-y-2">
+        <h1 class="text-2xl font-medium tracking-[-0.03em]">Settings</h1>
+        <p class="max-w-2xl text-sm text-[var(--muted-foreground)]">
+          Defaults used when adding new movie entries.
+        </p>
+      </header>
+      <SettingsWatchedWithForm
+        client:load
+        defaultWatchedWith={settingsData.defaultWatchedWith}
+        userId={user.id}
+        watchedWithOptions={settingsData.watchedWithOptions}
+      />
+    </section>
+  ) : (
+    <ProfileSelectionPanel client:load profiles={profiles} />
+  )}
 </BaseLayout>

@@ -1,14 +1,11 @@
 import { defineMiddleware } from "astro:middleware";
 
-import { auth } from "@/lib/auth";
+import { CURRENT_USER_COOKIE, getLocalProfileById } from "@/lib/local-profiles";
 
 export const onRequest = defineMiddleware(async (context, next) => {
-  const session = await auth.api.getSession({
-    headers: context.request.headers,
-  });
-
-  context.locals.user = session?.user ?? null;
-  context.locals.session = session?.session ?? null;
+  context.locals.user = await getLocalProfileById(
+    context.cookies.get(CURRENT_USER_COOKIE)?.value,
+  );
 
   return next();
 });

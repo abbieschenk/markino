@@ -1,6 +1,6 @@
 # Markino
 
-Markino is a local-network movie watch and ranking app built with Astro, React islands, Drizzle, Better Auth, and Postgres.
+Markino is a local-network movie watch and ranking app built with Astro, React islands, Drizzle, local profiles, and Postgres.
 
 ## Setup
 
@@ -20,7 +20,6 @@ Set the app environment variables in `.env.local`:
 
 ```bash
 DATABASE_URL=postgres://markino:markino@localhost:54322/markino
-BETTER_AUTH_SECRET=replace-with-a-random-32-plus-character-secret
 TMDB_ACCESS_TOKEN=replace-with-your-tmdb-read-access-token
 ```
 

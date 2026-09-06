@@ -92,12 +92,14 @@ type MovieColumnsOptions = {
   activeEditTarget: MovieEntryEditTarget | null;
   canSyncMetadata: boolean;
   onEdit: (target: MovieEntryEditTarget) => void;
+  userId: string;
 };
 
 export function createMovieColumns({
   activeEditTarget,
   canSyncMetadata,
   onEdit,
+  userId,
 }: MovieColumnsOptions): ColumnDef<MovieLedgerEntry>[] {
   function isActiveEditTarget(
     entry: MovieLedgerEntry,
@@ -282,6 +284,7 @@ export function createMovieColumns({
         isSynced={row.getValue<boolean>("isMetadataSynced")}
         movieId={row.original.movieId}
         title={row.original.title}
+        userId={userId}
       />
     ),
     sortingFn: "basic",
@@ -294,6 +297,7 @@ export function createMovieColumns({
       <div className="flex justify-end">
         <DeleteMovieButton
           title={row.original.title}
+          userId={userId}
           watchEntryId={row.original.watchEntryId}
         />
       </div>
@@ -309,15 +313,21 @@ function SyncedCell({
   isSynced,
   movieId,
   title,
+  userId,
 }: {
   canSyncMetadata: boolean;
   isSynced: boolean;
   movieId: string;
   title: string;
+  userId: string;
 }) {
   if (isSynced) {
     return canSyncMetadata ? (
-      <ResyncMovieMetadataButton movieId={movieId} title={title} />
+      <ResyncMovieMetadataButton
+        movieId={movieId}
+        title={title}
+        userId={userId}
+      />
     ) : (
       <span
         className="flex justify-center text-[var(--muted-foreground)]"
@@ -336,6 +346,7 @@ function SyncedCell({
           display="icon"
           movieId={movieId}
           title={title}
+          userId={userId}
         />
       </div>
     );
@@ -351,9 +362,11 @@ function SyncedCell({
 function ResyncMovieMetadataButton({
   movieId,
   title,
+  userId,
 }: {
   movieId: string;
   title: string;
+  userId: string;
 }) {
   const [pending, setPending] = useState(false);
 
@@ -363,7 +376,7 @@ function ResyncMovieMetadataButton({
     startTransition(async () => {
       try {
         const result = await getActionData(
-          actions.resyncMovieMetadata({ movieId }),
+          actions.resyncMovieMetadata({ movieId, userId }),
         );
 
         if (result.status === "error") {

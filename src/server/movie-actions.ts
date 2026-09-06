@@ -18,7 +18,7 @@ import {
   watchEntries,
   watchEntryParticipants,
 } from "@/db/schema";
-import { auth } from "@/lib/auth";
+import { getLocalProfileById } from "@/lib/local-profiles";
 import { getVisibleMovieIdsForUser } from "@/lib/movies";
 import {
   getTmdbMovieDetails,
@@ -37,6 +37,7 @@ type MovieActionResult = {
   message: string | null;
 };
 type UpdateMovieEntryInput = {
+  userId: string;
   watchEntryId: string;
   watchedOn: string;
   watchedDatePrecision: WatchDatePrecisionValue;
@@ -169,6 +170,7 @@ function parseUpdateMovieEntryInput(
   input: UpdateMovieEntryInput,
 ): UpdateMovieEntryInput {
   return {
+    userId: input.userId.trim(),
     watchEntryId: input.watchEntryId.trim(),
     watchedOn: input.watchedOn.trim(),
     watchedDatePrecision: input.watchedDatePrecision,
@@ -237,39 +239,47 @@ function parseTmdbId(value: FormDataEntryValue | null) {
   return Number.isInteger(tmdbId) && tmdbId > 0 ? tmdbId : null;
 }
 
-async function requireSuperadmin(requestHeaders: Headers) {
-  const session = await auth.api.getSession({
-    headers: requestHeaders,
-  });
+async function requireLocalProfile(userId: string | null | undefined) {
+  const user = await getLocalProfileById(userId);
 
-  if (!session?.user?.id) {
+  if (!user) {
     return {
       status: "error" as const,
-      message: "You must be signed in to sync movie metadata.",
-      userId: null,
-    };
-  }
-
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, session.user.id),
-    columns: {
-      id: true,
-      role: true,
-    },
-  });
-
-  if (user?.role !== "superadmin") {
-    return {
-      status: "error" as const,
-      message: "Only superadmins can sync movie metadata.",
-      userId: session.user.id,
+      message: "Select a profile and try again.",
+      user: null,
     };
   }
 
   return {
     status: "success" as const,
     message: null,
-    userId: session.user.id,
+    user,
+  };
+}
+
+async function requireSuperadmin(userId: string | null | undefined) {
+  const profile = await requireLocalProfile(userId);
+
+  if (profile.status === "error") {
+    return {
+      status: "error" as const,
+      message: "Select a profile to sync movie metadata.",
+      user: null,
+    };
+  }
+
+  if (profile.user.role !== "superadmin") {
+    return {
+      status: "error" as const,
+      message: "Only superadmins can sync movie metadata.",
+      user: profile.user,
+    };
+  }
+
+  return {
+    status: "success" as const,
+    message: null,
+    user: profile.user,
   };
 }
 
@@ -533,16 +543,13 @@ async function writeMovieMetadata(
 
 export async function addMovieEntry(
   formData: FormData,
-  requestHeaders: Headers,
 ): Promise<{ status: "idle" | "error" | "success"; message: string | null }> {
-  const session = await auth.api.getSession({
-    headers: requestHeaders,
-  });
+  const profile = await requireLocalProfile(String(formData.get("userId") ?? ""));
 
-  if (!session?.user?.id) {
+  if (profile.status === "error") {
     return {
       status: "error",
-      message: "You must be signed in to add a movie.",
+      message: "Select a profile to add a movie.",
     };
   }
 
@@ -606,7 +613,7 @@ export async function addMovieEntry(
     new Set(
       entries.flatMap((entry) =>
         entry.watchedWithHandles.filter(
-          (handle) => handle !== session.user.handle,
+          (handle) => handle !== profile.user.handle,
         ),
       ),
     ),
@@ -705,7 +712,7 @@ export async function addMovieEntry(
         const [watchEntry] = await tx
           .insert(watchEntries)
           .values({
-            userId: session.user.id,
+            userId: profile.user.id,
             movieId,
             watchedOn: entry.watchedOn,
             watchedDatePrecision: entry.watchedDatePrecision,
@@ -715,7 +722,7 @@ export async function addMovieEntry(
           .returning({ id: watchEntries.id });
 
         const rowParticipantUsers = entry.watchedWithHandles
-          .filter((handle) => handle !== session.user.handle)
+          .filter((handle) => handle !== profile.user.handle)
           .map((handle) => participantUserByHandle.get(handle))
           .filter((user): user is (typeof participantUsers)[number] =>
             Boolean(user),
@@ -749,17 +756,15 @@ export async function addMovieEntry(
 }
 
 export async function deleteMovieEntry(
+  userId: string,
   watchEntryId: string,
-  requestHeaders: Headers,
 ): Promise<{ status: "error" | "success"; message: string | null }> {
-  const session = await auth.api.getSession({
-    headers: requestHeaders,
-  });
+  const profile = await requireLocalProfile(userId);
 
-  if (!session?.user?.id) {
+  if (profile.status === "error") {
     return {
       status: "error",
-      message: "You must be signed in to delete a movie.",
+      message: "Select a profile to delete a movie.",
     };
   }
 
@@ -777,13 +782,13 @@ export async function deleteMovieEntry(
         throw new Error("WATCH_ENTRY_NOT_FOUND");
       }
 
-      if (watchEntry.userId === session.user.id) {
+      if (watchEntry.userId === profile.user.id) {
         await tx.delete(watchEntries).where(eq(watchEntries.id, watchEntry.id));
       } else {
         const participantLink = await tx.query.watchEntryParticipants.findFirst({
           where: and(
             eq(watchEntryParticipants.watchEntryId, watchEntry.id),
-            eq(watchEntryParticipants.userId, session.user.id),
+            eq(watchEntryParticipants.userId, profile.user.id),
           ),
           columns: {
             userId: true,
@@ -797,7 +802,7 @@ export async function deleteMovieEntry(
         await tx.delete(watchEntryParticipants).where(
           and(
             eq(watchEntryParticipants.watchEntryId, watchEntry.id),
-            eq(watchEntryParticipants.userId, session.user.id),
+            eq(watchEntryParticipants.userId, profile.user.id),
           ),
         );
       }
@@ -820,16 +825,13 @@ export async function deleteMovieEntry(
 
 export async function updateMovieEntry(
   input: UpdateMovieEntryInput,
-  requestHeaders: Headers,
 ): Promise<MovieActionResult> {
-  const session = await auth.api.getSession({
-    headers: requestHeaders,
-  });
+  const profile = await requireLocalProfile(input.userId);
 
-  if (!session?.user?.id) {
+  if (profile.status === "error") {
     return {
       status: "error",
-      message: "You must be signed in to edit a movie.",
+      message: "Select a profile to edit a movie.",
     };
   }
 
@@ -865,7 +867,7 @@ export async function updateMovieEntry(
   }
 
   const participantHandles = entry.watchedWithHandles.filter(
-    (handle) => handle !== session.user.handle,
+    (handle) => handle !== profile.user.handle,
   );
   const participantUsers =
     participantHandles.length > 0
@@ -896,7 +898,7 @@ export async function updateMovieEntry(
         throw new Error("WATCH_ENTRY_NOT_FOUND");
       }
 
-      if (watchEntry.userId !== session.user.id) {
+      if (watchEntry.userId !== profile.user.id) {
         throw new Error("WATCH_ENTRY_FORBIDDEN");
       }
 
@@ -940,17 +942,15 @@ export async function updateMovieEntry(
 }
 
 export async function reorderMovieRankings(
+  userId: string,
   orderedMovieIds: string[],
-  requestHeaders: Headers,
 ): Promise<{ status: "error" | "success"; message: string | null }> {
-  const session = await auth.api.getSession({
-    headers: requestHeaders,
-  });
+  const profile = await requireLocalProfile(userId);
 
-  if (!session?.user?.id) {
+  if (profile.status === "error") {
     return {
       status: "error",
-      message: "You must be signed in to reorder movies.",
+      message: "Select a profile to reorder movies.",
     };
   }
 
@@ -963,7 +963,7 @@ export async function reorderMovieRankings(
     };
   }
 
-  const visibleMovieIds = await getVisibleMovieIdsForUser(session.user.id);
+  const visibleMovieIds = await getVisibleMovieIdsForUser(profile.user.id);
   const visibleMovieIdSet = new Set(visibleMovieIds);
   const hasSameMovieSet =
     uniqueOrderedMovieIds.length === visibleMovieIds.length &&
@@ -980,12 +980,12 @@ export async function reorderMovieRankings(
     await db.transaction(async (tx) => {
       await tx
         .delete(movieRankings)
-        .where(eq(movieRankings.userId, session.user.id));
+        .where(eq(movieRankings.userId, profile.user.id));
 
       if (uniqueOrderedMovieIds.length > 0) {
         await tx.insert(movieRankings).values(
           uniqueOrderedMovieIds.map((movieId, index) => ({
-            userId: session.user.id,
+            userId: profile.user.id,
             movieId,
             rank: index + 1,
           })),
@@ -1009,10 +1009,10 @@ export async function reorderMovieRankings(
 }
 
 export async function searchTmdbMovieMatches(
+  userId: string,
   movieId: string,
-  requestHeaders: Headers,
 ): Promise<TmdbSearchResult> {
-  const authorized = await requireSuperadmin(requestHeaders);
+  const authorized = await requireSuperadmin(userId);
 
   if (authorized.status === "error") {
     return {
@@ -1056,17 +1056,15 @@ export async function searchTmdbMovieMatches(
 }
 
 export async function searchTmdbMovieMatchesByTitle(
+  userId: string,
   query: string,
-  requestHeaders: Headers,
 ): Promise<TmdbSearchResult> {
-  const session = await auth.api.getSession({
-    headers: requestHeaders,
-  });
+  const profile = await requireLocalProfile(userId);
 
-  if (!session?.user?.id) {
+  if (profile.status === "error") {
     return {
       status: "error",
-      message: "You must be signed in to search TMDB.",
+      message: "Select a profile to search TMDB.",
       matches: [],
     };
   }
@@ -1099,11 +1097,11 @@ export async function searchTmdbMovieMatchesByTitle(
 }
 
 export async function syncMovieMetadata(
+  userId: string,
   movieId: string,
   tmdbId: number,
-  requestHeaders: Headers,
 ): Promise<MovieActionResult> {
-  const authorized = await requireSuperadmin(requestHeaders);
+  const authorized = await requireSuperadmin(userId);
 
   if (authorized.status === "error") {
     return {
@@ -1158,10 +1156,10 @@ export async function syncMovieMetadata(
 }
 
 export async function resyncMovieMetadata(
+  userId: string,
   movieId: string,
-  requestHeaders: Headers,
 ): Promise<MovieActionResult> {
-  const authorized = await requireSuperadmin(requestHeaders);
+  const authorized = await requireSuperadmin(userId);
 
   if (authorized.status === "error") {
     return {
@@ -1191,5 +1189,5 @@ export async function resyncMovieMetadata(
     };
   }
 
-  return syncMovieMetadata(movieId, movie.tmdbId, requestHeaders);
+  return syncMovieMetadata(userId, movieId, movie.tmdbId);
 }

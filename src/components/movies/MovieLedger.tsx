@@ -17,6 +17,7 @@ import type { MovieLedgerEntry, MovieWatchEntry } from "@/lib/movies";
 type MovieLedgerProps = {
   data: MovieLedgerEntry[];
   canSyncMetadata?: boolean;
+  userId: string;
   watchedWithOptions: string[];
   toolbarActions?: ReactNode;
 };
@@ -24,6 +25,7 @@ type MovieLedgerProps = {
 export function MovieLedger({
   data,
   canSyncMetadata = false,
+  userId,
   watchedWithOptions,
   toolbarActions,
 }: MovieLedgerProps) {
@@ -36,8 +38,9 @@ export function MovieLedger({
         activeEditTarget: editTarget,
         canSyncMetadata,
         onEdit: setEditTarget,
+        userId,
       }),
-    [canSyncMetadata, editTarget],
+    [canSyncMetadata, editTarget, userId],
   );
 
   function isActiveEditTarget(
@@ -55,11 +58,13 @@ export function MovieLedger({
       <MovieDataTable
         columns={columns}
         data={data}
+        userId={userId}
         renderExpandedRow={(entry) => (
           <MovieWatchHistory
             entry={entry}
             isActiveEditTarget={isActiveEditTarget}
             onEdit={setEditTarget}
+            userId={userId}
           />
         )}
         toolbarActions={toolbarActions}
@@ -68,6 +73,7 @@ export function MovieLedger({
         <MovieEntryEditPanel
           key={`${editTarget.entry.watchEntryId}:${editTarget.field}`}
           target={editTarget}
+          userId={userId}
           watchedWithOptions={watchedWithOptions}
           onCancel={() => setEditTarget(null)}
         />
@@ -80,6 +86,7 @@ function MovieWatchHistory({
   entry,
   isActiveEditTarget,
   onEdit,
+  userId,
 }: {
   entry: MovieLedgerEntry;
   isActiveEditTarget: (
@@ -87,6 +94,7 @@ function MovieWatchHistory({
     field: EditableMovieEntryField,
   ) => boolean;
   onEdit: (target: MovieEntryEditTarget) => void;
+  userId: string;
 }) {
   return (
     <div className="ml-16 overflow-x-auto border-l border-[var(--border)]">
@@ -129,6 +137,7 @@ function MovieWatchHistory({
             <div className="flex justify-end">
               <DeleteMovieButton
                 title={`${entry.title} (${watchEntry.watchedDateDisplay})`}
+                userId={userId}
                 watchEntryId={watchEntry.watchEntryId}
               />
             </div>

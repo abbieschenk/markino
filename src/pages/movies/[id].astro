@@ -1,24 +1,27 @@
 ---
 import BaseLayout from "@/layouts/base-layout.astro";
 import { SyncMovieMetadataButton } from "@/components/movies/sync-movie-metadata-button";
+import { ProfileSelectionPanel } from "@/components/profiles/profile-selection-panel";
 import { getMovieByIdForUser } from "@/lib/movies";
+import { listLocalProfiles } from "@/lib/local-profiles";
 
 const user = Astro.locals.user;
+const profiles = user?.id ? [] : await listLocalProfiles();
 const movie = user?.id
   ? await getMovieByIdForUser(Astro.params.id ?? "", user.id)
   : null;
 
-if (!movie) {
+if (user?.id && !movie) {
   return new Response(null, { status: 404 });
 }
 
 const canSyncMetadata = user?.role === "superadmin";
 const hasCredits =
-  Boolean(movie.director) ||
-  Boolean(movie.writer) ||
-  Boolean(movie.editor) ||
-  movie.cast.length > 0;
-const posterUrl = movie.posterPath
+  Boolean(movie?.director) ||
+  Boolean(movie?.writer) ||
+  Boolean(movie?.editor) ||
+  (movie?.cast.length ?? 0) > 0;
+const posterUrl = movie?.posterPath
   ? `https://image.tmdb.org/t/p/w500${movie.posterPath}`
   : null;
 
@@ -61,8 +64,9 @@ function formatMoney(value: number | null) {
 }
 ---
 
-<BaseLayout title={movie.title}>
-  <section class="space-y-6">
+<BaseLayout title={movie?.title ?? "Movies"}>
+  {user?.id && movie ? (
+    <section class="space-y-6">
     <div class="space-y-2">
       <a
         href="/movies"
@@ -86,6 +90,7 @@ function formatMoney(value: number | null) {
             client:load
             movieId={movie.movieId}
             title={movie.title}
+            userId={user.id}
           />
         ) : null}
       </div>
@@ -288,5 +293,8 @@ function formatMoney(value: number | null) {
       </div>
       <div class="px-4 py-3 text-sm">{movie.watchedWith.join(", ")}</div>
     </section>
-  </section>
+    </section>
+  ) : (
+    <ProfileSelectionPanel client:load profiles={profiles} />
+  )}
 </BaseLayout>
