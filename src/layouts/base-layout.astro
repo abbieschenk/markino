@@ -1,6 +1,5 @@
 ---
 import SiteNav from "@/components/layout/site-nav.astro";
-import { Toaster } from "@/components/ui/sonner";
 import "@/styles.css";
 
 type Props = {
@@ -31,6 +30,5 @@ const pageTitle = title === "Markino" ? title : `${title} | Markino`;
         <slot />
       </main>
     </div>
-    <Toaster client:load position="bottom-right" richColors={false} />
   </body>
 </html>
