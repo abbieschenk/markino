@@ -754,10 +754,26 @@
     </div>
   </div>
   <div class="overflow-x-auto">
-    <table class="w-full caption-bottom text-sm">
+    <table
+      class="w-full table-fixed caption-bottom text-sm"
+      style="width: 83rem; min-width: 83rem; table-layout: fixed;"
+    >
+      <colgroup>
+        <col style="width: 7rem;" />
+        <col style="width: 28rem;" />
+        <col style="width: 9rem;" />
+        <col style="width: 7rem;" />
+        <col style="width: 6rem;" />
+        <col style="width: 14rem;" />
+        <col style="width: 6rem;" />
+        <col style="width: 6rem;" />
+      </colgroup>
       <thead class="bg-[var(--muted)] [&_tr]:border-b">
         <tr class="border-b transition-colors hover:bg-muted/50">
-          <th class="h-10 w-16 px-2 text-left align-middle font-medium">
+          <th
+            class="h-10 px-2 text-left align-middle font-medium"
+            style="width: 7rem;"
+          >
             {@render sortButton("rank", "#")}
           </th>
           <th class="h-10 w-[28rem] max-w-[28rem] px-2 text-left align-middle font-medium">
@@ -789,7 +805,7 @@
             {@const canExpand = entry.watchCount > 1}
             <tr
               class={[
-                "border-b transition-colors hover:bg-muted/50",
+                "h-12 border-b transition-colors hover:bg-muted/50",
                 draggedMovieId === entry.movieId ? "opacity-50" : "",
                 dropTarget?.movieId === entry.movieId &&
                 dropTarget.position === "before"
@@ -804,8 +820,10 @@
               ondragover={(event) => handleDragOver(event, entry.movieId)}
               ondrop={(event) => handleDrop(event, entry.movieId)}
             >
-              <td class="p-2 align-middle">
-                <div class="grid grid-cols-[1.25rem_2rem_2rem] items-center gap-1">
+              <td class="h-12 p-2 align-middle">
+                <div
+                  class="grid w-[5.75rem] grid-cols-[1.25rem_2rem_2rem] items-center gap-1"
+                >
                   {#if canReorder}
                     <button
                       type="button"
@@ -814,7 +832,7 @@
                       aria-label={`Reorder ${entry.title}`}
                       title={canDragReorder ? "Drag to reorder" : "Saving order"}
                       class={[
-                        "-ml-1 flex size-5 items-center justify-center text-muted-foreground transition-opacity ease-out",
+                        "col-start-1 -ml-1 flex size-5 items-center justify-center text-muted-foreground leading-none transition-opacity ease-out",
                         draggedMovieId !== null
                           ? "opacity-35 duration-150"
                           : "opacity-100 duration-[650ms]",
@@ -826,31 +844,42 @@
                         handleDragStart(event, entry.movieId)}
                       ondragend={handleDragEnd}
                     >
-                      ::
+                      {@render gripIcon()}
                     </button>
                   {:else}
-                    <span aria-hidden="true" class="-ml-1 block size-5 shrink-0"
+                    <span
+                      aria-hidden="true"
+                      class="col-start-1 -ml-1 block size-5 shrink-0"
                     ></span>
                   {/if}
                   {#if canExpand}
                     <button
                       type="button"
-                      class="inline-flex h-6 w-8 items-center justify-center gap-0.5 rounded-none px-1 text-[11px] text-muted-foreground hover:bg-transparent hover:text-foreground"
+                      class="col-start-2 inline-flex h-6 w-8 items-center justify-center gap-0.5 rounded-none px-1 text-[11px] leading-none text-muted-foreground hover:bg-transparent hover:text-foreground"
                       aria-expanded={isExpanded}
                       aria-label={`${isExpanded ? "Collapse" : "Expand"} ${entry.title} watch history`}
                       title={isExpanded ? "Collapse watch history" : "Expand watch history"}
                       onclick={() => toggleExpandedMovie(entry.movieId)}
                     >
-                      {isExpanded ? "v" : ">"} {entry.watchCount}
+                      {#if isExpanded}
+                        {@render chevronDownIcon()}
+                      {:else}
+                        {@render chevronRightIcon()}
+                      {/if}
+                      <span class="tabular-nums">{entry.watchCount}</span>
                     </button>
                   {:else}
-                    <span aria-hidden="true" class="block h-6 w-8 shrink-0"
+                    <span
+                      aria-hidden="true"
+                      class="col-start-2 block h-6 w-8 shrink-0"
                     ></span>
                   {/if}
-                  <span class="text-muted-foreground tabular-nums">{entry.rank}</span>
+                  <span class="col-start-3 text-muted-foreground tabular-nums">
+                    {entry.rank}
+                  </span>
                 </div>
               </td>
-              <td class="p-2 align-middle">
+              <td class="h-12 p-2 align-middle">
                 <a
                   href={`/movies/${entry.id}`}
                   class={[
@@ -862,7 +891,7 @@
                   {entry.title}
                 </a>
               </td>
-              <td class="p-2 align-middle">
+              <td class="h-12 p-2 align-middle">
                 {@render editableCellButton(
                   entry,
                   "watchedOn",
@@ -870,7 +899,7 @@
                   entry.watchedDateDisplay,
                 )}
               </td>
-              <td class="p-2 align-middle">
+              <td class="h-12 p-2 align-middle">
                 {@render editableCellButton(
                   entry,
                   "language",
@@ -878,14 +907,14 @@
                   entry.language,
                 )}
               </td>
-              <td class="p-2 align-middle">
+              <td class="h-12 p-2 align-middle">
                 <span
                   class="inline-flex min-w-12 justify-center border border-[var(--border)] px-1.5 py-0.5 text-[11px] uppercase tracking-[0.18em]"
                 >
                   {entry.status}
                 </span>
               </td>
-              <td class="p-2 align-middle">
+              <td class="h-12 p-2 align-middle">
                 {@render editableCellButton(
                   entry,
                   "watchedWith",
@@ -893,10 +922,10 @@
                   entry.watchedWith.join(", ") || "-",
                 )}
               </td>
-              <td class="p-2 align-middle">
+              <td class="h-12 p-2 align-middle">
                 {@render syncedCell(entry)}
               </td>
-              <td class="p-2 align-middle">
+              <td class="h-12 p-2 align-middle">
                 <div class="flex justify-end">
                   {@render deleteButton(entry.title, entry.watchEntryId)}
                 </div>
@@ -1361,6 +1390,52 @@
   >
     <path d="m7 15 5 5 5-5" />
     <path d="m7 9 5-5 5 5" />
+  </svg>
+{/snippet}
+
+{#snippet gripIcon()}
+  <svg
+    aria-hidden="true"
+    class="size-3.5"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+  >
+    <circle cx="9" cy="6" r="1.25" />
+    <circle cx="15" cy="6" r="1.25" />
+    <circle cx="9" cy="12" r="1.25" />
+    <circle cx="15" cy="12" r="1.25" />
+    <circle cx="9" cy="18" r="1.25" />
+    <circle cx="15" cy="18" r="1.25" />
+  </svg>
+{/snippet}
+
+{#snippet chevronRightIcon()}
+  <svg
+    aria-hidden="true"
+    class="size-3"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="m9 18 6-6-6-6" />
+  </svg>
+{/snippet}
+
+{#snippet chevronDownIcon()}
+  <svg
+    aria-hidden="true"
+    class="size-3"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="m6 9 6 6 6-6" />
   </svg>
 {/snippet}
 
