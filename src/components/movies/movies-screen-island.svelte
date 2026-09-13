@@ -756,45 +756,45 @@
   <div class="overflow-x-auto">
     <table
       class="w-full table-fixed caption-bottom text-sm"
-      style="width: 83rem; min-width: 83rem; table-layout: fixed;"
+      style="min-width: 64rem; table-layout: fixed;"
     >
       <colgroup>
-        <col style="width: 7rem;" />
-        <col style="width: 28rem;" />
-        <col style="width: 9rem;" />
-        <col style="width: 7rem;" />
         <col style="width: 6rem;" />
-        <col style="width: 14rem;" />
+        <col style="width: 22rem;" />
+        <col style="width: 8rem;" />
         <col style="width: 6rem;" />
-        <col style="width: 6rem;" />
+        <col style="width: 5.5rem;" />
+        <col style="width: 8.5rem;" />
+        <col style="width: 5rem;" />
+        <col style="width: 3rem;" />
       </colgroup>
       <thead class="bg-[var(--muted)] [&_tr]:border-b">
         <tr class="border-b transition-colors hover:bg-muted/50">
           <th
             class="h-10 px-2 text-left align-middle font-medium"
-            style="width: 7rem;"
+            style="width: 6rem;"
           >
             {@render sortButton("rank", "#")}
           </th>
-          <th class="h-10 w-[28rem] max-w-[28rem] px-2 text-left align-middle font-medium">
+          <th class="h-10 w-[22rem] max-w-[22rem] px-2 text-left align-middle font-medium">
             {@render sortButton("title", "Title")}
           </th>
-          <th class="h-10 w-36 px-2 text-left align-middle font-medium">
+          <th class="h-10 w-32 px-2 text-left align-middle font-medium">
             {@render sortButton("watchedOn", "Watched")}
           </th>
-          <th class="h-10 w-28 px-2 text-left align-middle font-medium">
+          <th class="h-10 w-24 px-2 text-left align-middle font-medium">
             {@render sortButton("language", "Language")}
           </th>
-          <th class="h-10 w-24 px-2 text-left align-middle font-medium">
+          <th class="h-10 px-2 text-left align-middle font-medium">
             {@render sortButton("status", "Status")}
           </th>
-          <th class="h-10 w-56 px-2 text-left align-middle font-medium">
+          <th class="h-10 px-2 text-left align-middle font-medium">
             {@render sortButton("watchedWith", "With")}
           </th>
-          <th class="h-10 w-24 px-2 text-left align-middle font-medium">
+          <th class="h-10 px-2 text-left align-middle font-medium">
             {@render sortButton("isMetadataSynced", "Synced")}
           </th>
-          <th class="h-10 w-24 px-2 text-left align-middle font-medium"></th>
+          <th class="h-10 px-1 text-right align-middle font-medium"></th>
         </tr>
       </thead>
       <tbody class="[&_tr:last-child]:border-0">
@@ -883,7 +883,7 @@
                 <a
                   href={`/movies/${entry.id}`}
                   class={[
-                    "block max-w-[28rem] truncate hover:underline",
+                    "block max-w-[22rem] truncate hover:underline",
                     entry.status !== "watched" ? "font-light italic" : "font-medium",
                   ]}
                   title={entry.title}
@@ -925,7 +925,7 @@
               <td class="h-12 p-2 align-middle">
                 {@render syncedCell(entry)}
               </td>
-              <td class="h-12 p-2 align-middle">
+              <td class="h-12 px-1 py-2 align-middle">
                 <div class="flex justify-end">
                   {@render deleteButton(entry.title, entry.watchEntryId)}
                 </div>
