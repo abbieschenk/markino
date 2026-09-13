@@ -1,12 +1,13 @@
 ---
 import BaseLayout from "@/layouts/base-layout.astro";
+import ChartPanel from "@/components/charts/chart-panel.astro";
 import { GenreOverTimePanel } from "@/components/charts/genre-over-time-panel";
-import { LabelCountPanel } from "@/components/charts/label-count-panel";
-import { MovieMoneyOverTimeChart } from "@/components/charts/movie-money-over-time-chart";
+import LabelCountBarChart from "@/components/charts/label-count-bar-chart.svelte";
+import MovieMoneyOverTimeChart from "@/components/charts/movie-money-over-time-chart.svelte";
 import { ProfileSelectionPanel } from "@/components/profiles/profile-selection-panel";
-import { ReleaseYearsPanel } from "@/components/charts/release-years-panel";
+import ReleaseYearChart from "@/components/charts/release-year-chart.svelte";
 import { WatchedByMonthPanel } from "@/components/charts/watched-by-month-panel";
-import { WatchedOverTimeChart } from "@/components/charts/watched-over-time-chart";
+import WatchedOverTimeChart from "@/components/charts/watched-over-time-chart.svelte";
 import { getMovieChartStatsForUser } from "@/lib/movie-chart-stats";
 import { listLocalProfiles } from "@/lib/local-profiles";
 
@@ -38,37 +39,38 @@ const stats = user?.id ? await getMovieChartStatsForUser(user.id) : null;
         />
 
         <MovieMoneyOverTimeChart
-          client:visible
+          client:idle
           monthlyData={stats.monthlyMoneyOverTime}
           yearlyData={stats.yearlyMoneyOverTime}
           monthlyOmittedCount={stats.yearOnlyWatchedOmittedFromMonthly}
         />
 
-        <ReleaseYearsPanel
-          client:visible
-          data={stats.releaseYears}
-        />
+        <ChartPanel title="Release Years" contentClass="mt-auto">
+          <ReleaseYearChart client:idle data={stats.releaseYears} />
+        </ChartPanel>
 
         <GenreOverTimePanel
           client:visible
           yearlyData={stats.yearlyGenreOverTime}
         />
 
-        <LabelCountPanel
-          client:visible
-          title="Top Directors"
-          eyebrow="Top 20"
-          data={stats.topDirectors}
-          emptyLabel="No director metadata synced yet."
-        />
+        <ChartPanel title="Top Directors" eyebrow="Top 20">
+          <LabelCountBarChart
+            client:idle
+            data={stats.topDirectors}
+            emptyLabel="No director metadata synced yet."
+            scrollable
+          />
+        </ChartPanel>
 
-        <LabelCountPanel
-          client:visible
-          title="Top Actors"
-          eyebrow="Top-billed cast, top 20"
-          data={stats.topActors}
-          emptyLabel="No cast metadata synced yet."
-        />
+        <ChartPanel title="Top Actors" eyebrow="Top-billed cast, top 20">
+          <LabelCountBarChart
+            client:idle
+            data={stats.topActors}
+            emptyLabel="No cast metadata synced yet."
+            scrollable
+          />
+        </ChartPanel>
       </div>
     </div>
   ) : (

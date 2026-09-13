@@ -1,7 +1,10 @@
 "use client";
 
 import { X } from "@phosphor-icons/react";
-import type { MouseHandlerDataParam } from "recharts";
+
+type ChartClickState = {
+  activeTooltipIndex?: unknown;
+};
 
 type MovieTooltipPayload = {
   value?: number | string;
@@ -37,7 +40,7 @@ export type PinnedMovieListTooltip = {
 };
 
 export function getActiveChartDataIndex(
-  chartState: MouseHandlerDataParam,
+  chartState: ChartClickState,
   itemCount: number,
 ) {
   const index = Number(chartState.activeTooltipIndex);

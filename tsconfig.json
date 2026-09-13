@@ -21,6 +21,7 @@
     ".astro/types.d.ts",
     "**/*.ts",
     "**/*.tsx",
+    "**/*.svelte",
     "**/*.astro",
     "**/*.mts"
   ],
