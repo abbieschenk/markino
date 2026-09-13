@@ -1,6 +1,6 @@
 ---
 import BaseLayout from "@/layouts/base-layout.astro";
-import { ProfileSelectionPanel } from "@/components/profiles/profile-selection-panel";
+import ProfileSelectionPanel from "@/components/profiles/profile-selection-panel.astro";
 import { SettingsWatchedWithForm } from "@/components/settings/settings-watched-with-form";
 import { listLocalProfiles } from "@/lib/local-profiles";
 import { getSettingsPageData } from "@/server/settings-page-data";
@@ -27,6 +27,6 @@ const settingsData = user?.id ? await getSettingsPageData(user.id) : null;
       />
     </section>
   ) : (
-    <ProfileSelectionPanel client:load profiles={profiles} />
+    <ProfileSelectionPanel profiles={profiles} />
   )}
 </BaseLayout>

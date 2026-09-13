@@ -1,5 +1,5 @@
 ---
-import { ProfileSwitcher } from "@/components/profiles/profile-switcher";
+import ProfileSwitcher from "@/components/profiles/profile-switcher.astro";
 import { listLocalProfiles } from "@/lib/local-profiles";
 
 const profiles = await listLocalProfiles();
@@ -30,7 +30,6 @@ const links = [
         ))}
       </nav>
       <ProfileSwitcher
-        client:load
         currentUser={Astro.locals.user}
         profiles={profiles}
       />

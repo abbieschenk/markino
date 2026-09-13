@@ -1,7 +1,7 @@
 ---
 import BaseLayout from "@/layouts/base-layout.astro";
 import { SyncMovieMetadataButton } from "@/components/movies/sync-movie-metadata-button";
-import { ProfileSelectionPanel } from "@/components/profiles/profile-selection-panel";
+import ProfileSelectionPanel from "@/components/profiles/profile-selection-panel.astro";
 import { getMovieByIdForUser } from "@/lib/movies";
 import { listLocalProfiles } from "@/lib/local-profiles";
 
@@ -295,6 +295,6 @@ function formatMoney(value: number | null) {
     </section>
     </section>
   ) : (
-    <ProfileSelectionPanel client:load profiles={profiles} />
+    <ProfileSelectionPanel profiles={profiles} />
   )}
 </BaseLayout>

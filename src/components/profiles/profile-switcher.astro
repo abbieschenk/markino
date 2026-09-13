@@ -1,0 +1,13 @@
+---
+import ProfileSwitcherMenu from "@/components/profiles/profile-switcher-menu.svelte";
+import type { LocalUser } from "@/lib/local-profiles";
+
+type Props = {
+  currentUser: LocalUser | null;
+  profiles: LocalUser[];
+};
+
+const { currentUser, profiles } = Astro.props;
+---
+
+<ProfileSwitcherMenu client:load currentUser={currentUser} profiles={profiles} />

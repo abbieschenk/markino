@@ -4,7 +4,7 @@ import ChartPanel from "@/components/charts/chart-panel.astro";
 import GenreOverTimePanel from "@/components/charts/genre-over-time-panel.astro";
 import LabelCountBarChart from "@/components/charts/label-count-bar-chart.svelte";
 import MovieMoneyOverTimeChart from "@/components/charts/movie-money-over-time-chart.svelte";
-import { ProfileSelectionPanel } from "@/components/profiles/profile-selection-panel";
+import ProfileSelectionPanel from "@/components/profiles/profile-selection-panel.astro";
 import ReleaseYearChart from "@/components/charts/release-year-chart.svelte";
 import WatchedByMonthPanel from "@/components/charts/watched-by-month-panel.astro";
 import WatchedOverTimeChart from "@/components/charts/watched-over-time-chart.svelte";
@@ -68,6 +68,6 @@ const stats = user?.id ? await getMovieChartStatsForUser(user.id) : null;
       </div>
     </div>
   ) : (
-    <ProfileSelectionPanel client:load profiles={profiles} />
+    <ProfileSelectionPanel profiles={profiles} />
   )}
 </BaseLayout>

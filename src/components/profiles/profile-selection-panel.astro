@@ -1,0 +1,20 @@
+---
+import ProfileSelectionPanelActions from "@/components/profiles/profile-selection-panel-actions.svelte";
+import type { LocalUser } from "@/lib/local-profiles";
+
+type Props = {
+  profiles: LocalUser[];
+};
+
+const { profiles } = Astro.props;
+---
+
+<section class="mx-auto grid max-w-xl gap-4 border border-[var(--border)] p-4">
+  <div class="space-y-1">
+    <h1 class="text-base font-medium">Select Profile</h1>
+    <p class="text-sm text-muted-foreground">
+      Choose a local profile to load its movie ledger.
+    </p>
+  </div>
+  <ProfileSelectionPanelActions client:load profiles={profiles} />
+</section>
