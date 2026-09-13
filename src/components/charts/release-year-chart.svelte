@@ -19,6 +19,7 @@
   const margin = { top: 8, right: 8, bottom: 30, left: 34 };
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
+  const axisTextStyle = "font-family: Arial, Helvetica, sans-serif; font-size: 10px; fill: var(--muted-foreground);";
 
   $: chartData = data
     .map((item) => ({ key: item.label, label: item.label, count: item.count, movies: item.movies, year: Number(item.label) }))
@@ -61,25 +62,25 @@
       {#each ticks as tick}
         {@const y = margin.top + plotHeight - (yMax > 0 ? (tick / yMax) * plotHeight : 0)}
         <line x1={margin.left} x2={width - margin.right} y1={y} y2={y} stroke="var(--border)" stroke-dasharray="2 4" />
-        <text x={margin.left - 8} y={y + 4} text-anchor="end" class="fill-[var(--muted-foreground)] text-[10px] tabular-nums">{tick}</text>
+        <text x={margin.left - 8} y={y + 4} text-anchor="end" style={axisTextStyle}>{tick}</text>
       {/each}
       {#each chartData as item}
         {@const x = xForYear(item.year)}
         {@const y = yForCount(item.count)}
         <g>
-          <title>{item.label}: {item.count.toLocaleString()} {item.count === 1 ? "movie" : "movies"}</title>
+          <title>{`${item.label}: ${item.count.toLocaleString()} ${item.count === 1 ? "movie" : "movies"}`}</title>
           <path
             d={getRoundedBarPath(x - 4, y, 8, margin.top + plotHeight - y)}
             fill="var(--chart-4)"
-            class="cursor-pointer opacity-90 hover:opacity-100"
+            class="cursor-pointer hover:fill-[var(--chart-5)]"
             on:pointerenter={(event) => activateTooltip(item, event)}
             on:pointermove={(event) => activateTooltip(item, event)}
             on:click={() => (pinnedTooltip = item)}
           />
         </g>
       {/each}
-      <text x={margin.left} y={height - 8} text-anchor="middle" class="fill-[var(--muted-foreground)] text-[10px] tabular-nums">{domainStart}</text>
-      <text x={width - margin.right} y={height - 8} text-anchor="middle" class="fill-[var(--muted-foreground)] text-[10px] tabular-nums">{domainEnd}</text>
+      <text x={margin.left} y={height - 8} text-anchor="middle" style={axisTextStyle}>{domainStart}</text>
+      <text x={width - margin.right} y={height - 8} text-anchor="middle" style={axisTextStyle}>{domainEnd}</text>
     </svg>
 
     {#if hoverTooltip && !pinnedTooltip}

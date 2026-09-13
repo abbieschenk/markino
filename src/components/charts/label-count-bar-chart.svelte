@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { LabelCount } from "@/lib/movie-chart-stats";
   import MovieTooltipPanel from "./movie-tooltip-panel.svelte";
-  import { getRoundedBarPath } from "./static-chart-utils";
+  import { getRoundedRectPath } from "./static-chart-utils";
 
   export let data: LabelCount[] = [];
   export let emptyLabel = "No chart data yet.";
@@ -20,6 +20,8 @@
   const rowHeight = 28;
   const labelWidth = 132;
   const rightPadding = 34;
+  const labelTextStyle = "font-family: Arial, Helvetica, sans-serif; font-size: 12px; fill: var(--foreground);";
+  const valueTextStyle = "font-family: Arial, Helvetica, sans-serif; font-size: 12px; fill: var(--foreground);";
 
   $: chartHeight = scrollable ? Math.max(300, data.length * rowHeight) : 300;
   $: maxCount = Math.max(...data.map((item) => item.count), 0);
@@ -51,17 +53,17 @@
           {@const y = index * rowHeight + 4}
           {@const barWidth = maxCount > 0 ? (item.count / maxCount) * (width - labelWidth - rightPadding) : 0}
           <g>
-            <title>{item.label}: {item.count.toLocaleString()} {item.count === 1 ? "movie" : "movies"}</title>
-            <text x="0" y={y + 17} class="fill-[var(--muted-foreground)] text-xs">{truncateLabel(item.label)}</text>
+            <title>{`${item.label}: ${item.count.toLocaleString()} ${item.count === 1 ? "movie" : "movies"}`}</title>
+            <text x="0" y={y + 17} style={labelTextStyle}>{truncateLabel(item.label)}</text>
             <path
-              d={getRoundedBarPath(labelWidth, y + 3, barWidth, 16, 2)}
+              d={getRoundedRectPath(labelWidth, y + 3, barWidth, 16, 2)}
               fill="var(--chart-5)"
               class="cursor-pointer opacity-90 hover:opacity-100"
               on:pointerenter={(event) => activateTooltip(item, event)}
               on:pointermove={(event) => activateTooltip(item, event)}
               on:click={() => (pinnedTooltip = item)}
             />
-            <text x={labelWidth + barWidth + 8} y={y + 16} class="fill-[var(--foreground)] text-xs tabular-nums">{item.count}</text>
+            <text x={labelWidth + barWidth + 8} y={y + 16} style={valueTextStyle}>{item.count}</text>
           </g>
         {/each}
       </svg>

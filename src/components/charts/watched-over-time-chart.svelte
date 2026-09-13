@@ -97,7 +97,7 @@
           {@const y = barY(item.count)}
           {@const h = margin.top + plotHeight - y}
           <g>
-            <title>{item.label}: {item.count.toLocaleString()} {item.count === 1 ? "movie watched" : "movies watched"}</title>
+            <title>{`${item.label}: ${item.count.toLocaleString()} ${item.count === 1 ? "movie watched" : "movies watched"}`}</title>
             <path
               d={getRoundedBarPath(x, y, barWidth, h)}
               fill="var(--chart-4)"

@@ -93,3 +93,13 @@ export function getRoundedBarPath(x: number, y: number, width: number, height: n
 
   return roundedRectPath(x, y, width, height, [safeRadius, safeRadius, 0, 0]);
 }
+
+export function getRoundedRectPath(x: number, y: number, width: number, height: number, radius = 2) {
+  if (width <= 0 || height <= 0) {
+    return "";
+  }
+
+  const safeRadius = Math.min(radius, width / 2, height / 2);
+
+  return roundedRectPath(x, y, width, height, [safeRadius, safeRadius, safeRadius, safeRadius]);
+}
