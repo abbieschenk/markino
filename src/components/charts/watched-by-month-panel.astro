@@ -1,0 +1,15 @@
+---
+import ChartPanel from "@/components/charts/chart-panel.astro";
+import WatchedByMonthChart from "@/components/charts/watched-by-month-chart.svelte";
+import type { WatchedByMonthCount } from "@/lib/movie-chart-stats";
+
+type Props = {
+  data: WatchedByMonthCount[];
+};
+
+const { data } = Astro.props;
+---
+
+<ChartPanel title="Watched by Month (%)">
+  <WatchedByMonthChart client:idle data={data} />
+</ChartPanel>

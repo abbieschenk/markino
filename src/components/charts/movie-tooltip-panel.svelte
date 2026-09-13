@@ -6,6 +6,11 @@
   export let pluralLabel = "movies";
   export let pinned = false;
   export let onClose: (() => void) | undefined = undefined;
+
+  function closePinnedTooltip(event: MouseEvent) {
+    event.stopPropagation();
+    onClose?.();
+  }
 </script>
 
 <div class="min-w-60 max-w-80 border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-xs shadow-lg">
@@ -23,7 +28,7 @@
         type="button"
         class="-mr-1 -mt-1 h-7 w-7 border border-transparent text-[var(--muted-foreground)] hover:border-[var(--border)] hover:text-[var(--foreground)]"
         aria-label="Close pinned tooltip"
-        on:click={onClose}
+        on:click={closePinnedTooltip}
       >
         x
       </button>

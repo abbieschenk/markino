@@ -1,12 +1,12 @@
 ---
 import BaseLayout from "@/layouts/base-layout.astro";
 import ChartPanel from "@/components/charts/chart-panel.astro";
-import { GenreOverTimePanel } from "@/components/charts/genre-over-time-panel";
+import GenreOverTimePanel from "@/components/charts/genre-over-time-panel.astro";
 import LabelCountBarChart from "@/components/charts/label-count-bar-chart.svelte";
 import MovieMoneyOverTimeChart from "@/components/charts/movie-money-over-time-chart.svelte";
 import { ProfileSelectionPanel } from "@/components/profiles/profile-selection-panel";
 import ReleaseYearChart from "@/components/charts/release-year-chart.svelte";
-import { WatchedByMonthPanel } from "@/components/charts/watched-by-month-panel";
+import WatchedByMonthPanel from "@/components/charts/watched-by-month-panel.astro";
 import WatchedOverTimeChart from "@/components/charts/watched-over-time-chart.svelte";
 import { getMovieChartStatsForUser } from "@/lib/movie-chart-stats";
 import { listLocalProfiles } from "@/lib/local-profiles";
@@ -33,10 +33,7 @@ const stats = user?.id ? await getMovieChartStatsForUser(user.id) : null;
           monthlyOmittedCount={stats.yearOnlyWatchedOmittedFromMonthly}
         />
 
-        <WatchedByMonthPanel
-          client:idle
-          data={stats.watchedByMonth}
-        />
+        <WatchedByMonthPanel data={stats.watchedByMonth} />
 
         <MovieMoneyOverTimeChart
           client:idle
@@ -49,10 +46,7 @@ const stats = user?.id ? await getMovieChartStatsForUser(user.id) : null;
           <ReleaseYearChart client:idle data={stats.releaseYears} />
         </ChartPanel>
 
-        <GenreOverTimePanel
-          client:visible
-          yearlyData={stats.yearlyGenreOverTime}
-        />
+        <GenreOverTimePanel yearlyData={stats.yearlyGenreOverTime} />
 
         <ChartPanel title="Top Directors" eyebrow="Top 20">
           <LabelCountBarChart
