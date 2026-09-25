@@ -39,7 +39,6 @@ The persisted preference order should not be lost when temporary table sorting/f
 - Astro
 - TypeScript
 - shadcn, incl. shadcn Data Table
-- Better Auth
 - Drizzle ORM
 - Postgres
 - Vercel

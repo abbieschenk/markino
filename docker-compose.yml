@@ -10,9 +10,6 @@ services:
       - "3000:3000"
     environment:
       DATABASE_URL: postgres://markino:markino@postgres:5432/markino
-      BETTER_AUTH_URL: http://localhost:3000
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET before running docker compose}
-      MARKINO_SIGNUPS_ENABLED: ${MARKINO_SIGNUPS_ENABLED:-false}
       TMDB_ACCESS_TOKEN: ${TMDB_ACCESS_TOKEN:-}
 
   postgres:
