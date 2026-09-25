@@ -27,10 +27,7 @@
     WatchDatePrecision,
     WatchStatus,
   } from "@/lib/movies";
-  import type { TmdbMovieMatch } from "@/lib/tmdb";
-
   type Props = {
-    canSyncMetadata: boolean;
     data: MovieLedgerEntry[];
     defaultWatchedWith: string[];
     userId: string;
@@ -66,7 +63,6 @@
   const SPLICE_DURATION_MS = 650;
 
   let {
-    canSyncMetadata,
     data,
     defaultWatchedWith,
     userId,
@@ -82,7 +78,6 @@
   let expandedMovieIds = $state<Set<string>>(new Set());
   let isSavingOrder = $state(false);
   let orderError = $state<string | null>(null);
-  let actionMessage = $state<string | null>(null);
   let editTarget = $state<MovieEntryEditTarget | null>(null);
   let addDialogOpen = $state(false);
   let addPending = $state(false);
@@ -94,12 +89,6 @@
   );
   let deletePending = $state(false);
   let deleteError = $state<string | null>(null);
-  let syncDialog = $state<{ movieId: string; title: string } | null>(null);
-  let syncMatches = $state<TmdbMovieMatch[]>([]);
-  let selectedTmdbId = $state<number | null>(null);
-  let syncSearchPending = $state(false);
-  let syncPending = $state(false);
-  let syncError = $state<string | null>(null);
 
   const [sorting, setSorting] = createTableState<SortingState>([
     { id: "rank", desc: false },
@@ -152,12 +141,6 @@
 
         return leftValue.localeCompare(rightValue, "en");
       },
-    },
-    {
-      accessorKey: "isMetadataSynced",
-      header: "Synced",
-      sortingFn: "basic",
-      enableColumnFilter: false,
     },
   ];
 
@@ -602,85 +585,6 @@
     }
   }
 
-  async function openSyncDialog(movieId: string, title: string) {
-    syncDialog = { movieId, title };
-    syncMatches = [];
-    selectedTmdbId = null;
-    syncSearchPending = true;
-    syncError = null;
-
-    try {
-      const result = await getActionData(
-        actions.searchTmdbMovieMatches({ movieId, userId }),
-      );
-
-      if (result.status === "error") {
-        syncError = result.message;
-        return;
-      }
-
-      syncMatches = result.matches;
-      selectedTmdbId = result.matches[0]?.tmdbId ?? null;
-    } catch (error) {
-      console.error("Failed to search TMDB", error);
-      syncError = "Unable to search TMDB.";
-    } finally {
-      syncSearchPending = false;
-    }
-  }
-
-  async function handleSync() {
-    if (!syncDialog || !selectedTmdbId) {
-      syncError = "Select a TMDB match first.";
-      return;
-    }
-
-    syncPending = true;
-    syncError = null;
-
-    try {
-      const result = await getActionData(
-        actions.syncMovieMetadata({
-          movieId: syncDialog.movieId,
-          tmdbId: selectedTmdbId,
-          userId,
-        }),
-      );
-
-      if (result.status === "error") {
-        syncError = result.message ?? "Unable to sync movie metadata.";
-        return;
-      }
-
-      syncDialog = null;
-      window.location.reload();
-    } catch (error) {
-      console.error("Failed to sync movie metadata", error);
-      syncError = "Unable to sync movie metadata.";
-    } finally {
-      syncPending = false;
-    }
-  }
-
-  async function handleResync(movieId: string, title: string) {
-    actionMessage = null;
-
-    try {
-      const result = await getActionData(
-        actions.resyncMovieMetadata({ movieId, userId }),
-      );
-
-      if (result.status === "error") {
-        actionMessage = result.message ?? "Unable to resync movie metadata.";
-        return;
-      }
-
-      window.location.reload();
-    } catch (error) {
-      console.error("Failed to resync movie metadata", error);
-      actionMessage = `Unable to resync TMDB metadata for ${title}.`;
-    }
-  }
 </script>
 
 <section class="border border-[var(--border)] bg-white/40">
@@ -734,9 +638,6 @@
       </div>
     </div>
     <div class="flex items-center gap-3">
-      {#if actionMessage}
-        <div class="text-xs text-destructive">{actionMessage}</div>
-      {/if}
       {#if orderError}
         <div class="text-xs text-destructive">{orderError}</div>
       {/if}
@@ -758,7 +659,7 @@
   <div class="overflow-x-auto">
     <table
       class="w-full table-fixed caption-bottom text-sm"
-      style="min-width: 64rem; table-layout: fixed;"
+      style="min-width: 59rem; table-layout: fixed;"
     >
       <colgroup>
         <col style="width: 6rem;" />
@@ -767,7 +668,6 @@
         <col style="width: 6rem;" />
         <col style="width: 5.5rem;" />
         <col style="width: 8.5rem;" />
-        <col style="width: 5rem;" />
         <col style="width: 3rem;" />
       </colgroup>
       <thead class="bg-[var(--muted)] [&_tr]:border-b">
@@ -792,9 +692,6 @@
           </th>
           <th class="h-10 px-2 text-left align-middle font-medium">
             {@render sortButton("watchedWith", "With")}
-          </th>
-          <th class="h-10 px-2 text-left align-middle font-medium">
-            {@render sortButton("isMetadataSynced", "Synced")}
           </th>
           <th class="h-10 px-1 text-right align-middle font-medium"></th>
         </tr>
@@ -924,9 +821,6 @@
                   entry.watchedWith.join(", ") || "-",
                 )}
               </td>
-              <td class="h-12 p-2 align-middle">
-                {@render syncedCell(entry)}
-              </td>
               <td class="h-12 px-1 py-2 align-middle">
                 <div class="flex justify-end">
                   {@render deleteButton(entry.title, entry.watchEntryId)}
@@ -935,7 +829,7 @@
             </tr>
             {#if isExpanded}
               <tr class="bg-[var(--muted)]/30 hover:bg-[var(--muted)]/30">
-                <td colspan="8" class="p-0">
+                <td colspan="7" class="p-0">
                   {@render movieWatchHistory(entry)}
                 </td>
               </tr>
@@ -943,7 +837,7 @@
           {/each}
         {:else}
           <tr class="border-b transition-colors hover:bg-muted/50">
-            <td colspan="8" class="h-24 p-2 text-center text-sm text-muted-foreground">
+            <td colspan="7" class="h-24 p-2 text-center text-sm text-muted-foreground">
               No movies match the current filters.
             </td>
           </tr>
@@ -1237,96 +1131,6 @@
   </div>
 {/if}
 
-{#if syncDialog}
-  <div class="fixed inset-0 z-40 bg-black/35" role="presentation"></div>
-  <div class="fixed inset-0 z-50 grid place-items-center p-4">
-    <div
-      class="max-w-2xl rounded-none border border-[var(--border)] bg-[var(--background)] p-0 text-[var(--foreground)] shadow-[0_24px_80px_rgba(0,0,0,0.18)]"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Sync TMDB"
-    >
-      <div class="border-b border-[var(--border)] px-4 py-3">
-        <h2
-          class="text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--muted-foreground)]"
-        >
-          Sync TMDB
-        </h2>
-      </div>
-      <div class="grid gap-3 px-4 py-4 text-sm">
-        <div class="font-medium">{syncDialog.title}</div>
-        {#if syncSearchPending}
-          <div class="border border-[var(--border)] px-3 py-4 text-[var(--muted-foreground)]">
-            Searching TMDB
-          </div>
-        {/if}
-        {#if !syncSearchPending && syncMatches.length === 0 && !syncError}
-          <div class="border border-[var(--border)] px-3 py-4 text-[var(--muted-foreground)]">
-            No TMDB matches found.
-          </div>
-        {/if}
-        {#if syncMatches.length > 0}
-          <div class="max-h-[22rem] overflow-y-auto border border-[var(--border)]">
-            {#each syncMatches as match (match.tmdbId)}
-              <button
-                type="button"
-                class={[
-                  "grid w-full gap-1 border-b border-[var(--border)] px-3 py-3 text-left last:border-b-0 hover:bg-[var(--muted)]",
-                  selectedTmdbId === match.tmdbId ? "bg-[var(--muted)]" : "",
-                ]}
-                onclick={() => (selectedTmdbId = match.tmdbId)}
-              >
-                <span class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                  <span class="font-medium">{match.title}</span>
-                  <span class="text-xs text-[var(--muted-foreground)]">
-                    {match.releaseYear ?? "Unknown year"} / {match.originalLanguage ||
-                      "n/a"}
-                  </span>
-                </span>
-                {#if match.originalTitle !== match.title}
-                  <span class="text-xs text-[var(--muted-foreground)]">
-                    {match.originalTitle}
-                  </span>
-                {/if}
-                <span class="line-clamp-2 text-xs leading-5 text-[var(--muted-foreground)]">
-                  {match.overview || "No overview available."}
-                </span>
-              </button>
-            {/each}
-          </div>
-        {/if}
-        {#if syncError}
-          <p
-            class="border border-[var(--destructive)]/20 bg-[var(--destructive)]/5 px-3 py-2 text-sm text-[var(--destructive)]"
-          >
-            {syncError}
-          </p>
-        {/if}
-      </div>
-      <div
-        class="flex justify-end gap-2 rounded-none border-t border-[var(--border)] bg-transparent px-4 py-3"
-      >
-        <button
-          type="button"
-          class="inline-flex h-9 items-center justify-center rounded-md px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
-          disabled={syncPending}
-          onclick={() => (syncDialog = null)}
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          class="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
-          disabled={syncSearchPending || syncPending || !selectedTmdbId}
-          onclick={handleSync}
-        >
-          {syncPending ? "Syncing..." : "Confirm Sync"}
-        </button>
-      </div>
-    </div>
-  </div>
-{/if}
-
 {#snippet sortButton(columnId: string, label: string)}
   <button
     type="button"
@@ -1492,81 +1296,6 @@
   >
     <path d="M18 6 6 18" />
     <path d="m6 6 12 12" />
-  </svg>
-{/snippet}
-
-{#snippet syncedCell(entry: MovieLedgerEntry)}
-  {#if entry.isMetadataSynced}
-    {#if canSyncMetadata}
-      <div class="flex justify-center">
-        <button
-          type="button"
-          class="group inline-flex size-8 items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-transparent hover:text-[var(--foreground)] focus-visible:text-[var(--foreground)]"
-          aria-label={`Resync TMDB metadata for ${entry.title}`}
-          title={`Resync TMDB metadata for ${entry.title}`}
-          onclick={() => handleResync(entry.movieId, entry.title)}
-        >
-          <span class="group-hover:hidden group-focus-visible:hidden">
-            {@render checkIcon()}
-          </span>
-          <span class="hidden group-hover:block group-focus-visible:block">
-            {@render syncIcon()}
-          </span>
-        </button>
-      </div>
-    {:else}
-      <span class="flex justify-center text-[var(--muted-foreground)]" title="Synced">
-        {@render checkIcon()}
-        <span class="sr-only">Synced</span>
-      </span>
-    {/if}
-  {:else if canSyncMetadata}
-    <div class="flex justify-center">
-      <button
-        type="button"
-        class="inline-flex size-8 items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-transparent hover:text-[var(--foreground)]"
-        aria-label={`Sync TMDB metadata for ${entry.title}`}
-        title={`Sync TMDB metadata for ${entry.title}`}
-        onclick={() => openSyncDialog(entry.movieId, entry.title)}
-      >
-        {@render syncIcon()}
-      </button>
-    </div>
-  {:else}
-    <span class="flex justify-center text-[var(--muted-foreground)]">-</span>
-  {/if}
-{/snippet}
-
-{#snippet checkIcon()}
-  <svg
-    aria-hidden="true"
-    class="size-3.5"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  >
-    <path d="M20 6 9 17l-5-5" />
-  </svg>
-{/snippet}
-
-{#snippet syncIcon()}
-  <svg
-    aria-hidden="true"
-    class="size-3.5"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  >
-    <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
-    <path d="M21 3v5h-5" />
-    <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
-    <path d="M3 21v-5h5" />
   </svg>
 {/snippet}
 

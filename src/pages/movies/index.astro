@@ -14,7 +14,6 @@ const movieScreenData = user?.id ? await getMovieScreenData(user.id) : null;
   {user?.id && movieScreenData ? (
     <MoviesScreenIsland
       client:load
-      canSyncMetadata={user.role === "superadmin"}
       data={movieScreenData.movieLedger}
       defaultWatchedWith={movieScreenData.defaultWatchedWith}
       userId={user.id}
