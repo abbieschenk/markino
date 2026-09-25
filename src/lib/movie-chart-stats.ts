@@ -61,6 +61,7 @@ export type MovieChartStats = {
   watchedByMonth: WatchedByMonthCount[];
   yearOnlyWatchedOmittedFromMonthly: number;
   releaseYears: LabelCount[];
+  watchedLanguages: LabelCount[];
   topGenres: LabelCount[];
   monthlyGenreOverTime: GenreOverTimeCount[];
   yearlyGenreOverTime: GenreOverTimeCount[];
@@ -81,6 +82,7 @@ type ChartWatchEntry = {
   movieId: string;
   watchedOn: string;
   watchedDatePrecision: "day" | "year";
+  languageWatched: string;
   movie: {
     title: string;
     releaseYear: number | null;
@@ -97,6 +99,7 @@ async function getOwnedChartWatchEntries(userId: string) {
       movieId: true,
       watchedOn: true,
       watchedDatePrecision: true,
+      languageWatched: true,
     },
     with: {
       movie: {
@@ -124,6 +127,7 @@ async function getParticipantChartWatchEntries(userId: string) {
           movieId: true,
           watchedOn: true,
           watchedDatePrecision: true,
+          languageWatched: true,
         },
         with: {
           movie: {
@@ -839,8 +843,20 @@ export async function getMovieChartStatsForUser(
     yearlyWatched.map((year) => [year.year, []]),
   );
   const movieIdsByReleaseYear = new Map<string, Set<string>>();
+  const entriesByLanguage = new Map<string, MovieTooltipEntry[]>();
 
   for (const entry of visibleEntries) {
+    const language = entry.languageWatched.trim() || "Unknown";
+    const languageEntries = entriesByLanguage.get(language) ?? [];
+    languageEntries.push({
+      movieId: entry.movieId,
+      title: entry.movie.title,
+      watchedOn: entry.watchedOn,
+      watchedYear: getWatchedYear(entry.watchedOn),
+      watchedDatePrecision: entry.watchedDatePrecision,
+    });
+    entriesByLanguage.set(language, languageEntries);
+
     if (entry.watchedDatePrecision === "day") {
       const month = entry.watchedOn.slice(0, 7);
       const monthMovies = moviesByMonth.get(month);
@@ -953,6 +969,17 @@ export async function getMovieChartStatsForUser(
         ),
       }))
       .sort((left, right) => Number(left.label) - Number(right.label)),
+    watchedLanguages: Array.from(entriesByLanguage.entries())
+      .map(([label, entries]) => ({
+        label,
+        count: entries.length,
+        movies: sortMoviesByWatchedOn(entries),
+      }))
+      .sort((left, right) =>
+        right.count !== left.count
+          ? right.count - left.count
+          : left.label.localeCompare(right.label, "en"),
+      ),
     topGenres,
     monthlyGenreOverTime,
     yearlyGenreOverTime,

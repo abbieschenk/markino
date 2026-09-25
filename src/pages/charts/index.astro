@@ -2,6 +2,7 @@
 import BaseLayout from "@/layouts/base-layout.astro";
 import ChartPanel from "@/components/charts/chart-panel.astro";
 import GenreOverTimePanel from "@/components/charts/genre-over-time-panel.astro";
+import LanguagePieChart from "@/components/charts/language-pie-chart.svelte";
 import LabelCountBarChart from "@/components/charts/label-count-bar-chart.svelte";
 import MovieMoneyOverTimeChart from "@/components/charts/movie-money-over-time-chart.svelte";
 import ProfileSelectionPanel from "@/components/profiles/profile-selection-panel.astro";
@@ -44,6 +45,10 @@ const stats = user?.id ? await getMovieChartStatsForUser(user.id) : null;
 
         <ChartPanel title="Release Years" contentClass="mt-auto">
           <ReleaseYearChart client:idle data={stats.releaseYears} />
+        </ChartPanel>
+
+        <ChartPanel title="Languages Watched" eyebrow="All movies">
+          <LanguagePieChart client:idle data={stats.watchedLanguages} />
         </ChartPanel>
 
         <GenreOverTimePanel yearlyData={stats.yearlyGenreOverTime} />
