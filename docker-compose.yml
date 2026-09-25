@@ -4,13 +4,23 @@ services:
       context: .
     container_name: markino-app
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     ports:
-      - "3000:3000"
+      - "${PORT:-3000}:3000"
     environment:
       DATABASE_URL: postgres://markino:markino@postgres:5432/markino
       TMDB_ACCESS_TOKEN: ${TMDB_ACCESS_TOKEN:-}
+
+  migrate:
+    build:
+      context: .
+    command: ["./node_modules/.bin/drizzle-kit", "migrate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://markino:markino@postgres:5432/markino
 
   postgres:
     image: postgres:17-alpine
