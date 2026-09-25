@@ -95,6 +95,10 @@ Containerized app runtime uses:
 DATABASE_URL=postgres://markino:markino@postgres:5432/markino
 ```
 
+## Superuser
+
+It's recommended to make one of the users a superuser. This has to be done in the database itself.
+
 ## Screenshots
 
 Note these may be slightly out of date.
