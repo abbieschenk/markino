@@ -10,7 +10,7 @@ const profiles = user?.id ? [] : await listLocalProfiles();
 const movieScreenData = user?.id ? await getMovieScreenData(user.id) : null;
 ---
 
-<BaseLayout title="Movies">
+<BaseLayout title="Movies" viewportConstrained>
   {user?.id && movieScreenData ? (
     <MoviesScreenIsland
       client:load

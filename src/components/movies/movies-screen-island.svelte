@@ -588,7 +588,7 @@
 </script>
 
 <section
-  class="flex max-h-[calc(100dvh-6.5rem)] min-h-0 flex-col border border-[var(--border)] bg-white/40"
+  class="flex h-full min-h-0 flex-col overflow-hidden border border-[var(--border)] bg-white/40"
 >
   <div
     class="flex flex-col gap-3 border-b border-[var(--border)] px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
@@ -659,7 +659,7 @@
     </div>
   </div>
   <div
-    class="min-h-0 overflow-auto overscroll-contain"
+    class="min-h-0 flex-1 overflow-auto overscroll-contain"
     data-slot="table-container"
   >
     <table

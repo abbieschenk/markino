@@ -5,11 +5,13 @@ import "@/styles.css";
 type Props = {
   description?: string;
   title?: string;
+  viewportConstrained?: boolean;
 };
 
 const {
   description = "A quiet movie watch and ranking ledger.",
   title = "Markino",
+  viewportConstrained = false,
 } = Astro.props;
 const pageTitle = title === "Markino" ? title : `${title} | Markino`;
 ---
@@ -23,10 +25,25 @@ const pageTitle = title === "Markino" ? title : `${title} | Markino`;
     <link rel="icon" href="/favicon.ico" />
     <title>{pageTitle}</title>
   </head>
-  <body class="min-h-full bg-[var(--background)] text-[var(--foreground)]">
-    <div class="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 sm:px-6">
+  <body
+    class:list={[
+      "bg-[var(--background)] text-[var(--foreground)]",
+      viewportConstrained ? "h-full overflow-hidden" : "min-h-full",
+    ]}
+  >
+    <div
+      class:list={[
+        "mx-auto flex w-full max-w-7xl flex-col px-4 sm:px-6",
+        viewportConstrained ? "h-dvh overflow-hidden" : "min-h-screen",
+      ]}
+    >
       <SiteNav />
-      <main class="flex-1 py-6">
+      <main
+        class:list={[
+          "flex-1 py-6",
+          viewportConstrained && "min-h-0 overflow-hidden",
+        ]}
+      >
         <slot />
       </main>
     </div>
