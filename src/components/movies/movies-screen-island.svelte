@@ -828,7 +828,22 @@
               </td>
               <td class="h-12 px-1 py-2 align-middle">
                 <div class="flex justify-end">
-                  {@render deleteButton(entry.title, entry.watchEntryId)}
+                  {#if entry.watchCount === 1}
+                    {@render deleteButton(entry.title, entry.watchEntryId)}
+                  {:else}
+                    <button
+                      type="button"
+                      class="inline-flex size-8 cursor-not-allowed items-center justify-center rounded-md text-[var(--muted-foreground)] opacity-35"
+                      aria-label={`Delete ${entry.title} entries individually from its watch history`}
+                      title="Delete individual entries from the watch history first"
+                      disabled
+                    >
+                      {@render xIcon()}
+                      <span class="sr-only">
+                        Delete individual entries from the watch history first
+                      </span>
+                    </button>
+                  {/if}
                 </div>
               </td>
             </tr>
