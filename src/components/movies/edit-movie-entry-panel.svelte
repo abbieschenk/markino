@@ -44,21 +44,27 @@
 
   let { target, userId, watchedWithOptions, onCancel }: Props = $props();
 
-  let draftText = $state(target.entry.language);
-  let draftWatchedOn = $state(
-    target.entry.watchedDatePrecision === "day" ? target.entry.watchedOn : "",
-  );
-  let draftWatchedYear = $state(
-    target.entry.watchedDatePrecision === "year"
-      ? target.entry.watchedOn
-      : String(target.entry.watchedYear).padStart(4, "0"),
-  );
-  let draftDatePrecision = $state<WatchDatePrecision>(
-    target.entry.watchedDatePrecision,
-  );
-  let draftWatchedWith = $state<string[]>(target.entry.watchedWith);
+  let draftText = $state("");
+  let draftWatchedOn = $state("");
+  let draftWatchedYear = $state("");
+  let draftDatePrecision = $state<WatchDatePrecision>("day");
+  let draftWatchedWith = $state<string[]>([]);
   let pending = $state(false);
   let error = $state<string | null>(null);
+
+  $effect(() => {
+    draftText = target.entry.language;
+    draftWatchedOn =
+      target.entry.watchedDatePrecision === "day" ? target.entry.watchedOn : "";
+    draftWatchedYear =
+      target.entry.watchedDatePrecision === "year"
+        ? target.entry.watchedOn
+        : String(target.entry.watchedYear).padStart(4, "0");
+    draftDatePrecision = target.entry.watchedDatePrecision;
+    draftWatchedWith = [...target.entry.watchedWith];
+    pending = false;
+    error = null;
+  });
 
   function formatYearDigits(value: string) {
     return value.replace(/\D/g, "").slice(0, 4);
@@ -212,7 +218,6 @@
       {#if draftDatePrecision === "day"}
         <input
           type="date"
-          autofocus
           disabled={pending}
           value={draftWatchedOn}
           class="h-8 rounded-none border border-r-0 border-[var(--border)] bg-transparent px-2 font-mono text-sm tabular-nums shadow-none"
@@ -221,7 +226,6 @@
         />
       {:else}
         <input
-          autofocus
           disabled={pending}
           value={draftWatchedYear}
           inputmode="numeric"
@@ -238,7 +242,6 @@
     </div>
   {:else if target.field === "language"}
     <input
-      autofocus
       disabled={pending}
       value={draftText}
       class="h-8 rounded-none border border-[var(--border)] bg-transparent px-2 text-sm shadow-none"

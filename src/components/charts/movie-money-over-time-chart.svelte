@@ -45,6 +45,13 @@
     return { x, y };
   }
 
+  function pinOnKeydown(event: KeyboardEvent, item: MoneyDatum) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      pinned = item;
+    }
+  }
+
   $: budgetPath = getPath(data.map((item, index) => point(item, index, "budget")));
   $: revenuePath = getPath(data.map((item, index) => point(item, index, "revenue")));
 </script>
@@ -101,8 +108,8 @@
           {@const revenuePoint = point(item, index, "revenue")}
           <g>
             <title>{item.label}: Budget {formatCurrency(item.budget)}, Revenue {formatCurrency(item.revenue)}</title>
-            <circle cx={budgetPoint.x} cy={budgetPoint.y} r="5" fill="transparent" class="cursor-pointer" on:click={() => (pinned = item)} />
-            <circle cx={revenuePoint.x} cy={revenuePoint.y} r="5" fill="transparent" class="cursor-pointer" on:click={() => (pinned = item)} />
+            <circle cx={budgetPoint.x} cy={budgetPoint.y} r="5" fill="transparent" class="cursor-pointer" role="button" tabindex="0" aria-label={`${item.label} budget ${formatCurrency(item.budget)}`} on:click={() => (pinned = item)} on:keydown={(event) => pinOnKeydown(event, item)} />
+            <circle cx={revenuePoint.x} cy={revenuePoint.y} r="5" fill="transparent" class="cursor-pointer" role="button" tabindex="0" aria-label={`${item.label} revenue ${formatCurrency(item.revenue)}`} on:click={() => (pinned = item)} on:keydown={(event) => pinOnKeydown(event, item)} />
           </g>
           {#if shouldShowXAxisLabel(index, data.length)}
             <text x={budgetPoint.x} y={height - 8} text-anchor="middle" class="fill-[var(--muted-foreground)] text-[10px] tabular-nums">{item.label}</text>

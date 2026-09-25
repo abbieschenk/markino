@@ -15,7 +15,13 @@
   };
 
   let { profiles }: Props = $props();
-  let showCreateForm = $state(profiles.length === 0);
+  let showCreateForm = $state(false);
+
+  $effect(() => {
+    if (profiles.length === 0) {
+      showCreateForm = true;
+    }
+  });
 
   onMount(() => {
     const storedUserId = window.localStorage.getItem(CURRENT_USER_STORAGE_KEY);

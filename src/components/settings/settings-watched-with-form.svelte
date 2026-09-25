@@ -17,10 +17,14 @@
 
   let { defaultWatchedWith, userId, watchedWithOptions }: Props = $props();
   let pending = $state(false);
-  let watchedWith = $state([...defaultWatchedWith]);
+  let watchedWith = $state<string[]>([]);
   let state = $state<SettingsActionState>({
     status: "idle",
     message: null,
+  });
+
+  $effect(() => {
+    watchedWith = [...defaultWatchedWith];
   });
 
   async function submitSettings(event: SubmitEvent) {

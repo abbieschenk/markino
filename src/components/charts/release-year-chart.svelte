@@ -50,6 +50,13 @@
       y: event.clientY - rect.top,
     };
   }
+
+  function pinOnKeydown(event: KeyboardEvent, item: LabelCount) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      pinnedTooltip = item;
+    }
+  }
 </script>
 
 {#if chartData.length === 0}
@@ -57,7 +64,7 @@
     No release year metadata synced yet.
   </div>
 {:else}
-  <div class="relative" bind:this={container} on:pointerleave={() => (hoverTooltip = null)}>
+  <div class="relative" role="presentation" bind:this={container} on:pointerleave={() => (hoverTooltip = null)}>
     <svg class="h-[260px] w-full overflow-visible" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Release years chart" preserveAspectRatio="none">
       {#each ticks as tick}
         {@const y = margin.top + plotHeight - (yMax > 0 ? (tick / yMax) * plotHeight : 0)}
@@ -73,9 +80,13 @@
             d={getRoundedBarPath(x - 4, y, 8, margin.top + plotHeight - y)}
             fill="var(--chart-4)"
             class="cursor-pointer hover:fill-[var(--chart-5)]"
+            role="button"
+            tabindex="0"
+            aria-label={`${item.label}: ${item.count.toLocaleString()} ${item.count === 1 ? "movie" : "movies"}`}
             on:pointerenter={(event) => activateTooltip(item, event)}
             on:pointermove={(event) => activateTooltip(item, event)}
             on:click={() => (pinnedTooltip = item)}
+            on:keydown={(event) => pinOnKeydown(event, item)}
           />
         </g>
       {/each}

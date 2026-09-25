@@ -56,6 +56,13 @@
       y: event.clientY - rect.top,
     };
   }
+
+  function pinOnKeydown(event: KeyboardEvent, item: MovieCountDatum) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      pinned = item;
+    }
+  }
 </script>
 
 <section class="flex flex-col border border-[var(--border)] bg-[var(--card)] p-4">
@@ -85,7 +92,7 @@
   {/if}
 
   {#if hasData}
-    <div class="relative" bind:this={container} on:pointerleave={() => (hoverTooltip = null)}>
+    <div class="relative" role="presentation" bind:this={container} on:pointerleave={() => (hoverTooltip = null)}>
       <svg class="h-[260px] w-full overflow-visible" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Watched over time chart" preserveAspectRatio="none">
         {#each ticks as tick}
           {@const y = margin.top + plotHeight - (yMax > 0 ? (tick / yMax) * plotHeight : 0)}
@@ -102,9 +109,13 @@
               d={getRoundedBarPath(x, y, barWidth, h)}
               fill="var(--chart-4)"
               class="cursor-pointer opacity-90 hover:opacity-100"
+              role="button"
+              tabindex="0"
+              aria-label={`${item.label}: ${item.count.toLocaleString()} ${item.count === 1 ? "movie watched" : "movies watched"}`}
               on:pointerenter={(event) => activateTooltip(item, event)}
               on:pointermove={(event) => activateTooltip(item, event)}
               on:click={() => (pinned = item)}
+              on:keydown={(event) => pinOnKeydown(event, item)}
             />
           </g>
           {#if shouldShowXAxisLabel(index, data.length)}

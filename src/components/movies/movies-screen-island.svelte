@@ -73,7 +73,7 @@
     watchedWithOptions,
   }: Props = $props();
 
-  let tableData = $state<MovieLedgerEntry[]>(data);
+  let tableData = $state<MovieLedgerEntry[]>([]);
   let titleSearch = $state("");
   let debouncedTitleSearch = $state("");
   let draggedMovieId = $state<string | null>(null);

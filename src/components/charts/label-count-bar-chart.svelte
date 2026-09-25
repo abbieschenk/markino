@@ -39,6 +39,13 @@
       y: event.clientY - rect.top,
     };
   }
+
+  function pinOnKeydown(event: KeyboardEvent, item: LabelCount) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      pinnedTooltip = item;
+    }
+  }
 </script>
 
 {#if data.length === 0}
@@ -46,7 +53,7 @@
     {emptyLabel}
   </div>
 {:else}
-  <div class="relative" bind:this={container} on:pointerleave={() => (hoverTooltip = null)}>
+  <div class="relative" role="presentation" bind:this={container} on:pointerleave={() => (hoverTooltip = null)}>
     <div class={scrollable ? "h-[300px] overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" : undefined}>
       <svg class="w-full overflow-visible" style={`height: ${chartHeight}px`} viewBox={`0 0 ${width} ${chartHeight}`} role="img" aria-label="Label count chart" preserveAspectRatio="none">
         {#each data as item, index}
@@ -59,9 +66,13 @@
               d={getRoundedRectPath(labelWidth, y + 3, barWidth, 16, 2)}
               fill="var(--chart-5)"
               class="cursor-pointer opacity-90 hover:opacity-100"
+              role="button"
+              tabindex="0"
+              aria-label={`${item.label}: ${item.count.toLocaleString()} ${item.count === 1 ? "movie" : "movies"}`}
               on:pointerenter={(event) => activateTooltip(item, event)}
               on:pointermove={(event) => activateTooltip(item, event)}
               on:click={() => (pinnedTooltip = item)}
+              on:keydown={(event) => pinOnKeydown(event, item)}
             />
             <text x={labelWidth + barWidth + 8} y={y + 16} style={valueTextStyle}>{item.count}</text>
           </g>
