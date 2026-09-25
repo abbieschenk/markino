@@ -16,6 +16,8 @@ I built this because I was disatisfied with all the websites / apps that do some
 
 Markino is built with Astro, Svelte islands, Drizzle, local profiles, and Postgres. It is almost 100% coded with Codex, and there absolutely might be bugs.
 
+Screenshots at the bottom of the README.
+
 ## Setup
 
 Install dependencies:
@@ -92,3 +94,18 @@ Containerized app runtime uses:
 ```bash
 DATABASE_URL=postgres://markino:markino@postgres:5432/markino
 ```
+
+## Screenshots
+
+Note these may be slightly out of date.
+
+Filterable table
+![](/screenshots/table.png)
+
+Charts
+![](/screenshots/charts-1.png)
+
+![](/screenshots/charts-2.png)
+
+Charts are interactive / hoverable
+![](/screenshots/charts-3.png)
