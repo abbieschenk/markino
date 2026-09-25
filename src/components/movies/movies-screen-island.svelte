@@ -183,7 +183,9 @@
   const canReorder = $derived(
     sorting().length === 1 &&
       sorting()[0]?.id === "rank" &&
-      sorting()[0]?.desc === false,
+      sorting()[0]?.desc === false &&
+      columnFilters().length === 0 &&
+      titleSearch.trim() === "",
   );
   const canDragReorder = $derived(canReorder && !isSavingOrder);
   const visibleRows = $derived.by(() => {
