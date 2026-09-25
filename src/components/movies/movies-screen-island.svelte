@@ -405,7 +405,7 @@
     const element = event.currentTarget as HTMLButtonElement;
     const rect = element.getBoundingClientRect();
     const panelWidth = Math.min(
-      field === "watchedWith" ? 520 : 420,
+      field === "language" ? 420 : 520,
       window.innerWidth - 24,
     );
 

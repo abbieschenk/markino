@@ -203,7 +203,7 @@
     {/if}
   </div>
   {#if target.field === "watchedOn"}
-    <div class="grid grid-cols-[5.25rem_1fr]">
+    <div class="grid min-w-0 grid-cols-[5.25rem_minmax(0,1fr)]">
       <select
         class="h-8 w-full rounded-none border border-r-0 border-[var(--border)] bg-[var(--background)] px-2 text-sm shadow-none"
         aria-label="Date precision"
@@ -220,7 +220,7 @@
           type="date"
           disabled={pending}
           value={draftWatchedOn}
-          class="h-8 rounded-none border border-r-0 border-[var(--border)] bg-transparent px-2 font-mono text-sm tabular-nums shadow-none"
+          class="h-8 min-w-0 rounded-none border border-[var(--border)] bg-transparent px-2 font-mono text-sm tabular-nums shadow-none"
           oninput={(event) => (draftWatchedOn = event.currentTarget.value)}
           onkeydown={handleKeyDown}
         />
@@ -268,7 +268,18 @@
       aria-label="Save edit"
       title="Save"
     >
-      ok
+      <svg
+        aria-hidden="true"
+        class="size-3.5"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="m5 12 4 4L19 6" />
+      </svg>
     </button>
     <button
       type="button"
