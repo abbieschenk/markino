@@ -2,6 +2,7 @@
 import BaseLayout from "@/layouts/base-layout.astro";
 import ProfileSelectionPanel from "@/components/profiles/profile-selection-panel.astro";
 import SettingsWatchedWithForm from "@/components/settings/settings-watched-with-form.svelte";
+import SettingsDataBackup from "@/components/settings/settings-data-backup.svelte";
 import { listLocalProfiles } from "@/lib/local-profiles";
 import { getSettingsPageData } from "@/server/settings-page-data";
 
@@ -16,7 +17,7 @@ const settingsData = user?.id ? await getSettingsPageData(user.id) : null;
       <header class="space-y-2">
         <h1 class="text-2xl font-medium tracking-[-0.03em]">Settings</h1>
         <p class="max-w-2xl text-sm text-[var(--muted-foreground)]">
-          Defaults used when adding new movie entries.
+          Configure entry defaults and manage installation data.
         </p>
       </header>
       <SettingsWatchedWithForm
@@ -25,6 +26,7 @@ const settingsData = user?.id ? await getSettingsPageData(user.id) : null;
         userId={user.id}
         watchedWithOptions={settingsData.watchedWithOptions}
       />
+      {user.role === "superadmin" && <SettingsDataBackup client:load />}
     </section>
   ) : (
     <ProfileSelectionPanel profiles={profiles} />
