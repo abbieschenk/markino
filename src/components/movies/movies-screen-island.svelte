@@ -587,7 +587,9 @@
 
 </script>
 
-<section class="border border-[var(--border)] bg-white/40">
+<section
+  class="flex max-h-[calc(100dvh-6.5rem)] min-h-0 flex-col border border-[var(--border)] bg-white/40"
+>
   <div
     class="flex flex-col gap-3 border-b border-[var(--border)] px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
   >
@@ -656,7 +658,10 @@
       </button>
     </div>
   </div>
-  <div class="overflow-x-auto">
+  <div
+    class="min-h-0 overflow-auto overscroll-contain"
+    data-slot="table-container"
+  >
     <table
       class="w-full table-fixed caption-bottom text-sm"
       style="min-width: 59rem; table-layout: fixed;"
@@ -670,7 +675,7 @@
         <col style="width: 8.5rem;" />
         <col style="width: 3rem;" />
       </colgroup>
-      <thead class="bg-[var(--muted)] [&_tr]:border-b">
+      <thead class="sticky top-0 z-[1] bg-[var(--muted)] [&_tr]:border-b">
         <tr class="border-b transition-colors hover:bg-muted/50">
           <th
             class="h-10 px-2 text-left align-middle font-medium"
