@@ -13,6 +13,7 @@
     type SortingState,
   } from "@tanstack/svelte-table";
   import { actions } from "astro:actions";
+  import { onMount } from "svelte";
 
   import NotchedInput from "@/components/base/notched-input.svelte";
   import NotchedSelect from "@/components/base/notched-select.svelte";
@@ -23,6 +24,7 @@
   } from "@/components/movies/edit-movie-entry-panel.svelte";
   import MovieTitleSearchField from "@/components/movies/movie-title-search-field.svelte";
   import WatchedWithSelect from "@/components/movies/watched-with-select.svelte";
+  import { MOVIE_NOUNS } from "@/consts/movie-nouns";
   import { getActionData } from "@/lib/action-result";
   import type {
     MovieLedgerEntry,
@@ -80,6 +82,7 @@
   }: Props = $props();
 
   let tableData = $state<MovieLedgerEntry[]>([]);
+  let movieNoun = $state<string>("movies");
   let titleSearch = $state("");
   let debouncedTitleSearch = $state("");
   let filtersOpen = $state(false);
@@ -215,6 +218,10 @@
       "all",
       ...Array.from(people).sort((left, right) => left.localeCompare(right)),
     ];
+  });
+
+  onMount(() => {
+    movieNoun = MOVIE_NOUNS[Math.floor(Math.random() * MOVIE_NOUNS.length)];
   });
 
   $effect(() => {
@@ -662,7 +669,11 @@
       </button>
     </div>
     <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-      <span>{visibleRows.length} of {tableData.length} movies</span>
+      <span>
+        {columnFilters().length > 0 || titleSearch.trim() !== ""
+          ? `${visibleRows.length} of ${tableData.length} ${movieNoun}`
+          : `${visibleRows.length} ${movieNoun}`}
+      </span>
       {#if isSavingOrder}
         <span>Saving order</span>
       {/if}
