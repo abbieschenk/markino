@@ -2,6 +2,7 @@ import { defineAction } from "astro:actions";
 import { z } from "astro:schema";
 
 import { createLocalProfile } from "@/lib/local-profiles";
+import { getMovieLedgerForUser } from "@/lib/movies";
 import {
   addMovieEntry,
   deleteMovieEntry,
@@ -15,6 +16,15 @@ import {
 import { updateDefaultWatchedWith } from "@/server/settings-actions";
 
 export const server = {
+  getMovieLedger: defineAction({
+    handler: async (_input, context) => {
+      if (!context.locals.user) {
+        throw new Error("Select a profile to load movies.");
+      }
+
+      return getMovieLedgerForUser(context.locals.user.id);
+    },
+  }),
   addMovieEntry: defineAction({
     accept: "form",
     handler: (formData) => addMovieEntry(formData),

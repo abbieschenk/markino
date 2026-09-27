@@ -24,7 +24,6 @@
   } from "@/components/movies/edit-movie-entry-panel.svelte";
   import MovieTitleSearchField from "@/components/movies/movie-title-search-field.svelte";
   import WatchedWithSelect from "@/components/movies/watched-with-select.svelte";
-  import { MOVIE_NOUNS } from "@/consts/movie-nouns";
   import { getActionData } from "@/lib/action-result";
   import type {
     MovieLedgerEntry,
@@ -32,8 +31,8 @@
     WatchStatus,
   } from "@/lib/movies";
   type Props = {
-    data: MovieLedgerEntry[];
     defaultWatchedWith: string[];
+    movieNoun: string;
     userId: string;
     watchedWithOptions: string[];
   };
@@ -75,14 +74,15 @@
   const SPLICE_DURATION_MS = 650;
 
   let {
-    data,
     defaultWatchedWith,
+    movieNoun,
     userId,
     watchedWithOptions,
   }: Props = $props();
 
   let tableData = $state<MovieLedgerEntry[]>([]);
-  let movieNoun = $state<string>("movies");
+  let isLoadingMovies = $state(true);
+  let loadError = $state(false);
   let titleSearch = $state("");
   let debouncedTitleSearch = $state("");
   let filtersOpen = $state(false);
@@ -221,12 +221,22 @@
   });
 
   onMount(() => {
-    movieNoun = MOVIE_NOUNS[Math.floor(Math.random() * MOVIE_NOUNS.length)];
+    void loadMovies();
   });
 
-  $effect(() => {
-    tableData = data;
-  });
+  async function loadMovies() {
+    isLoadingMovies = true;
+    loadError = false;
+
+    try {
+      tableData = await getActionData(actions.getMovieLedger());
+    } catch (error) {
+      console.error("Failed to load movies", error);
+      loadError = true;
+    } finally {
+      isLoadingMovies = false;
+    }
+  }
 
   $effect(() => {
     if (!splicedMovieId) {
@@ -668,12 +678,21 @@
         Add
       </button>
     </div>
-    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-      <span>
-        {columnFilters().length > 0 || titleSearch.trim() !== ""
-          ? `${visibleRows.length} of ${tableData.length} ${movieNoun}`
-          : `${visibleRows.length} ${movieNoun}`}
-      </span>
+    <div class="flex min-h-4 flex-wrap items-center gap-x-3 gap-y-1 text-[11px] leading-4 text-muted-foreground">
+      {#if isLoadingMovies}
+        <span role="status" aria-label="Loading movie count">
+          <span class="sr-only">Loading movie count…</span>
+          <span class="block h-3 w-20 bg-[var(--muted)]" aria-hidden="true"></span>
+        </span>
+      {:else if loadError}
+        <span>Movie count unavailable</span>
+      {:else}
+        <span>
+          {columnFilters().length > 0 || titleSearch.trim() !== ""
+            ? `${visibleRows.length} of ${tableData.length} ${movieNoun}`
+            : `${visibleRows.length} ${movieNoun}`}
+        </span>
+      {/if}
       {#if isSavingOrder}
         <span>Saving order</span>
       {/if}
@@ -768,7 +787,26 @@
         </tr>
       </thead>
       <tbody class="[&_tr:last-child]:border-0">
-        {#if visibleRows.length > 0}
+        {#if isLoadingMovies}
+          {#each Array(7) as _, index}
+            <tr class="h-12 border-b" aria-hidden="true">
+              <td class="h-12 p-2 align-middle"><div class="h-3 w-5 bg-[var(--muted)]"></div></td>
+              <td class="h-12 p-2 align-middle"><div class={['h-3 max-w-full bg-[var(--muted)]', index % 3 === 0 ? 'w-44' : index % 3 === 1 ? 'w-28' : 'w-36']}></div></td>
+              <td class="h-12 p-2 align-middle"><div class="h-3 w-20 bg-[var(--muted)]"></div></td>
+              <td class="h-12 p-2 align-middle"><div class="h-3 w-14 bg-[var(--muted)]"></div></td>
+              <td class="h-12 p-2 align-middle"><div class="h-5 w-14 bg-[var(--muted)]"></div></td>
+              <td class="h-12 p-2 align-middle"><div class="h-3 w-16 bg-[var(--muted)]"></div></td>
+              <td class="h-12 p-2 align-middle"></td>
+            </tr>
+          {/each}
+        {:else if loadError}
+          <tr>
+            <td colspan="7" class="h-24 p-2 text-center text-sm text-muted-foreground">
+              Unable to load movies.
+              <button type="button" class="ml-2 underline underline-offset-4 hover:text-foreground" onclick={loadMovies}>Retry</button>
+            </td>
+          </tr>
+        {:else if visibleRows.length > 0}
           {#each visibleRows as row (row.id)}
             {@const entry = row.original}
             {@const isExpanded = expandedMovieIds.has(entry.movieId)}

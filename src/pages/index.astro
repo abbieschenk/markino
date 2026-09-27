@@ -2,22 +2,24 @@
 import BaseLayout from "@/layouts/base-layout.astro";
 import MoviesScreenIsland from "@/components/movies/movies-screen-island.svelte";
 import ProfileSelectionPanel from "@/components/profiles/profile-selection-panel.astro";
+import { MOVIE_NOUNS } from "@/consts/movie-nouns";
 import { listLocalProfiles } from "@/lib/local-profiles";
-import { getMovieScreenData } from "@/server/movie-page-data";
+import { getMovieScreenOptions } from "@/server/movie-page-data";
 
 const user = Astro.locals.user;
 const profiles = user?.id ? [] : await listLocalProfiles();
-const movieScreenData = user?.id ? await getMovieScreenData(user.id) : null;
+const movieScreenOptions = user?.id ? await getMovieScreenOptions(user.id) : null;
+const movieNoun = MOVIE_NOUNS[Math.floor(Math.random() * MOVIE_NOUNS.length)];
 ---
 
 <BaseLayout viewportConstrained>
-  {user?.id && movieScreenData ? (
+  {user?.id && movieScreenOptions ? (
     <MoviesScreenIsland
       client:load
-      data={movieScreenData.movieLedger}
-      defaultWatchedWith={movieScreenData.defaultWatchedWith}
+      defaultWatchedWith={movieScreenOptions.defaultWatchedWith}
+      movieNoun={movieNoun}
       userId={user.id}
-      watchedWithOptions={movieScreenData.watchedWithOptions}
+      watchedWithOptions={movieScreenOptions.watchedWithOptions}
     />
   ) : (
     <div class="py-10">

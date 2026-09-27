@@ -2,12 +2,10 @@ import { asc, eq, ne } from "drizzle-orm";
 
 import { db } from "@/db";
 import { userDefaultWatchParticipants, users } from "@/db/schema";
-import { getMovieLedgerForUser } from "@/lib/movies";
 
-export async function getMovieScreenData(userId: string) {
-  const [movieLedger, watchedWithOptions, defaultWatchedWith] =
+export async function getMovieScreenOptions(userId: string) {
+  const [watchedWithOptions, defaultWatchedWith] =
     await Promise.all([
-      getMovieLedgerForUser(userId),
       db
         .select({ handle: users.handle })
         .from(users)
@@ -26,7 +24,6 @@ export async function getMovieScreenData(userId: string) {
 
   return {
     defaultWatchedWith: defaultWatchedWith.map((user) => user.handle),
-    movieLedger,
     watchedWithOptions: watchedWithOptions.map((user) => user.handle),
   };
 }
