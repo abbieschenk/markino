@@ -464,6 +464,27 @@
     dropTarget = null;
   }
 
+  function moveMovieOnePlace(movieId: string, direction: -1 | 1) {
+    if (!canDragReorder) return;
+
+    const ordered = [...tableData].sort((left, right) => left.rank - right.rank);
+    const index = ordered.findIndex((entry) => entry.movieId === movieId);
+    const neighbor = ordered[index + direction];
+    if (!neighbor) return;
+
+    const target: DropTarget = {
+      movieId: neighbor.movieId,
+      position: direction === -1 ? "before" : "after",
+    };
+    const nextData = moveMovieInRankOrder(tableData, movieId, target);
+    if (!nextData) return;
+
+    const previousData = tableData;
+    tableData = nextData;
+    splicedMovieId = movieId;
+    void persistMovieOrder(nextData, previousData);
+  }
+
   async function persistMovieOrder(
     nextData: MovieLedgerEntry[],
     previousData: MovieLedgerEntry[],
@@ -588,12 +609,24 @@
 </script>
 
 <section
-  class="flex h-full min-h-0 flex-col overflow-hidden border border-[var(--border)] bg-white/40"
+  class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden border border-[var(--border)] bg-white/40"
 >
   <div
     class="flex flex-col gap-3 border-b border-[var(--border)] px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
   >
-    <div class="flex flex-wrap gap-2">
+    <div class="flex min-w-0 flex-wrap gap-2">
+      <div class="w-full sm:w-56">
+        <label for="movie-title-table-search" class="sr-only">
+          Search movie titles
+        </label>
+        <input
+          id="movie-title-table-search"
+          type="search"
+          bind:value={titleSearch}
+          placeholder="Search titles"
+          class="border-input placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground h-8 w-full min-w-0 rounded-none border bg-transparent px-2 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+        />
+      </div>
       <select
         class="h-8 min-w-32 rounded-none border border-[var(--border)] bg-[var(--background)] px-2 text-sm shadow-none"
         aria-label="Status filter"
@@ -626,18 +659,19 @@
           </option>
         {/each}
       </select>
-      <div class="w-full sm:w-56">
-        <label for="movie-title-table-search" class="sr-only">
-          Search movie titles
-        </label>
-        <input
-          id="movie-title-table-search"
-          type="search"
-          bind:value={titleSearch}
-          placeholder="Search titles"
-          class="border-input placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground h-8 w-full min-w-0 rounded-none border bg-transparent px-2 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-        />
-      </div>
+      <select
+        class="h-8 w-full rounded-none border border-[var(--border)] bg-[var(--background)] px-2 text-sm md:hidden"
+        aria-label="Sort movies"
+        value={sorting()[0]?.id ?? "rank"}
+        onchange={(event) => setSorting([{ id: event.currentTarget.value, desc: false }])}
+      >
+        <option value="rank">Sort: preference</option>
+        <option value="title">Sort: title</option>
+        <option value="watchedOn">Sort: watched date</option>
+        <option value="language">Sort: language</option>
+        <option value="status">Sort: status</option>
+        <option value="watchedWith">Sort: watched with</option>
+      </select>
     </div>
     <div class="flex items-center gap-3">
       {#if orderError}
@@ -662,34 +696,28 @@
     class="min-h-0 flex-1 overflow-auto overscroll-contain"
     data-slot="table-container"
   >
-    <table
-      class="w-full table-fixed caption-bottom text-sm"
-      style="min-width: 59rem; table-layout: fixed;"
-    >
+    <table class="movie-ledger-table w-full table-fixed caption-bottom text-sm">
       <colgroup>
-        <col style="width: 6rem;" />
-        <col style="width: 22rem;" />
-        <col style="width: 8rem;" />
-        <col style="width: 6rem;" />
-        <col style="width: 5.5rem;" />
-        <col style="width: 8.5rem;" />
-        <col style="width: 3rem;" />
+        <col class="movie-rank-column" />
+        <col class="movie-title-column" />
+        <col class="movie-detail-column" />
+        <col class="movie-detail-column" />
+        <col class="movie-detail-column" />
+        <col class="movie-detail-column" />
+        <col class="movie-delete-column" />
       </colgroup>
       <thead class="sticky top-0 z-[1] bg-[var(--muted)] [&_tr]:border-b">
         <tr class="border-b transition-colors hover:bg-muted/50">
-          <th
-            class="h-10 px-2 text-left align-middle font-medium"
-            style="width: 6rem;"
-          >
+          <th class="h-10 px-2 text-left align-middle font-medium">
             {@render sortButton("rank", "#")}
           </th>
-          <th class="h-10 w-[22rem] max-w-[22rem] px-2 text-left align-middle font-medium">
+          <th class="h-10 px-2 text-left align-middle font-medium">
             {@render sortButton("title", "Title")}
           </th>
-          <th class="h-10 w-32 px-2 text-left align-middle font-medium">
+          <th class="h-10 px-2 text-left align-middle font-medium">
             {@render sortButton("watchedOn", "Watched")}
           </th>
-          <th class="h-10 w-24 px-2 text-left align-middle font-medium">
+          <th class="h-10 px-2 text-left align-middle font-medium">
             {@render sortButton("language", "Language")}
           </th>
           <th class="h-10 px-2 text-left align-middle font-medium">
@@ -725,9 +753,7 @@
               ondrop={(event) => handleDrop(event, entry.movieId)}
             >
               <td class="h-12 p-2 align-middle">
-                <div
-                  class="grid w-[5.75rem] grid-cols-[1.25rem_2rem_2rem] items-center gap-1"
-                >
+                <div class="flex flex-col items-center gap-1 md:grid md:w-[5.75rem] md:grid-cols-[1.25rem_2rem_2rem] md:gap-1">
                   {#if canReorder}
                     <button
                       type="button"
@@ -736,7 +762,7 @@
                       aria-label={`Reorder ${entry.title}`}
                       title={canDragReorder ? "Drag to reorder" : "Saving order"}
                       class={[
-                        "col-start-1 -ml-1 flex size-5 items-center justify-center text-muted-foreground leading-none transition-opacity ease-out",
+                        "col-start-1 -ml-1 hidden size-5 items-center justify-center text-muted-foreground leading-none transition-opacity ease-out md:flex",
                         draggedMovieId !== null
                           ? "opacity-35 duration-150"
                           : "opacity-100 duration-[650ms]",
@@ -753,13 +779,13 @@
                   {:else}
                     <span
                       aria-hidden="true"
-                      class="col-start-1 -ml-1 block size-5 shrink-0"
+                      class="col-start-1 -ml-1 hidden size-5 shrink-0 md:block"
                     ></span>
                   {/if}
                   {#if canExpand}
                     <button
                       type="button"
-                      class="col-start-2 inline-flex h-6 w-8 items-center justify-center gap-0.5 rounded-none px-1 text-[11px] leading-none text-muted-foreground hover:bg-transparent hover:text-foreground"
+                      class="col-start-2 hidden h-6 w-8 items-center justify-center gap-0.5 rounded-none px-1 text-[11px] leading-none text-muted-foreground hover:bg-transparent hover:text-foreground md:inline-flex"
                       aria-expanded={isExpanded}
                       aria-label={`${isExpanded ? "Collapse" : "Expand"} ${entry.title} watch history`}
                       title={isExpanded ? "Collapse watch history" : "Expand watch history"}
@@ -775,25 +801,39 @@
                   {:else}
                     <span
                       aria-hidden="true"
-                      class="col-start-2 block h-6 w-8 shrink-0"
+                      class="col-start-2 hidden h-6 w-8 shrink-0 md:block"
                     ></span>
                   {/if}
                   <span class="col-start-3 text-muted-foreground tabular-nums">
                     {entry.rank}
                   </span>
+                  <div class="flex flex-col md:hidden">
+                    <button type="button" class="text-muted-foreground disabled:opacity-25" aria-label={`Move ${entry.title} up`} disabled={!canDragReorder || entry.rank === 1} onclick={() => moveMovieOnePlace(entry.movieId, -1)}>↑</button>
+                    <button type="button" class="text-muted-foreground disabled:opacity-25" aria-label={`Move ${entry.title} down`} disabled={!canDragReorder || entry.rank === tableData.length} onclick={() => moveMovieOnePlace(entry.movieId, 1)}>↓</button>
+                  </div>
                 </div>
               </td>
               <td class="h-12 p-2 align-middle">
                 <a
                   href={`/movies/${entry.id}`}
                   class={[
-                    "block max-w-[22rem] truncate hover:underline",
+                    "block truncate hover:underline",
                     entry.status !== "watched" ? "font-light italic" : "font-medium",
                   ]}
                   title={entry.title}
                 >
                   {entry.title}
                 </a>
+                <div class="movie-mobile-meta mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground md:hidden">
+                  {#if canExpand}
+                    <button type="button" class="underline" aria-expanded={isExpanded} aria-label={`${isExpanded ? "Collapse" : "Expand"} ${entry.title} watch history`} onclick={() => toggleExpandedMovie(entry.movieId)}>{entry.watchCount} watches</button>
+                  {/if}
+                  {@render editableCellButton(entry, "watchedOn", isActiveEditTarget(entry, "watchedOn"), entry.watchedDateDisplay)}
+                  <span aria-hidden="true">·</span>
+                  {@render editableCellButton(entry, "language", isActiveEditTarget(entry, "language"), entry.language)}
+                  <span class="uppercase">{entry.status}</span>
+                  {@render editableCellButton(entry, "watchedWith", isActiveEditTarget(entry, "watchedWith"), `With: ${entry.watchedWith.join(", ") || "—"}`)}
+                </div>
               </td>
               <td class="h-12 p-2 align-middle">
                 {@render editableCellButton(
@@ -1320,7 +1360,7 @@
 {/snippet}
 
 {#snippet movieWatchHistory(entry: MovieLedgerEntry)}
-  <div class="ml-16 overflow-x-auto border-l border-[var(--border)]">
+  <div class="overflow-x-auto border-l border-[var(--border)] md:ml-16">
     <div class="min-w-[42rem]">
       <div
         class="grid grid-cols-[8rem_7rem_6rem_minmax(12rem,1fr)_3rem] items-center border-b border-[var(--border)] px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground"
