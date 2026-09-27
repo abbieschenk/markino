@@ -102,6 +102,32 @@ body {
   scrollbar-width: thin;
 }
 
+.notched-field {
+  position: relative;
+  height: 2.75rem;
+  border: 1px solid var(--border);
+  background: var(--background);
+}
+
+.notched-field:focus-within {
+  border-color: var(--foreground);
+}
+
+.notched-field-label {
+  position: absolute;
+  top: -0.5rem;
+  left: calc(0.40rem);
+  padding-inline: 0.3rem;
+  background: var(--background);
+  color: var(--muted-foreground);
+  font-size: 0.7rem;
+  line-height: 1rem;
+}
+
+.notched-field:focus-within .notched-field-label {
+  color: var(--foreground);
+}
+
 .movie-ledger-table {
   min-width: 59rem;
 }

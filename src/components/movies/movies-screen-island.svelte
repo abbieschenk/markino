@@ -14,6 +14,8 @@
   } from "@tanstack/svelte-table";
   import { actions } from "astro:actions";
 
+  import NotchedInput from "@/components/base/notched-input.svelte";
+  import NotchedSelect from "@/components/base/notched-select.svelte";
   import EditMovieEntryPanel, {
     type EditableMovieEntry,
     type EditableMovieEntryField,
@@ -58,6 +60,14 @@
     "watched",
     "dnf",
     "dns",
+  ];
+  const SORT_OPTIONS = [
+    { value: "rank", label: "Preference" },
+    { value: "title", label: "Title" },
+    { value: "watchedOn", label: "Watched date" },
+    { value: "language", label: "Language" },
+    { value: "status", label: "Status" },
+    { value: "watchedWith", label: "Watched with" },
   ];
   const TITLE_SEARCH_DEBOUNCE_MS = 300;
   const SPLICE_DURATION_MS = 650;
@@ -615,63 +625,48 @@
     class="flex flex-col gap-3 border-b border-[var(--border)] px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
   >
     <div class="flex min-w-0 flex-wrap gap-2">
-      <div class="w-full sm:w-56">
-        <label for="movie-title-table-search" class="sr-only">
-          Search movie titles
-        </label>
-        <input
-          id="movie-title-table-search"
-          type="search"
-          bind:value={titleSearch}
-          placeholder="Search titles"
-          class="border-input placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground h-8 w-full min-w-0 rounded-none border bg-transparent px-2 py-1 text-base shadow-xs outline-none transition-[color,box-shadow] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-        />
-      </div>
-      <select
-        class="h-8 min-w-32 rounded-none border border-[var(--border)] bg-[var(--background)] px-2 text-sm shadow-none"
-        aria-label="Status filter"
+      <NotchedInput
+        id="movie-title-table-search"
+        label="Search titles"
+        type="search"
+        bind:value={titleSearch}
+        className="w-full sm:w-56"
+      />
+      <NotchedSelect
+        id="movie-status-filter"
+        label="Status"
         value={statusFilter}
-        onchange={(event) => {
-          const value = event.currentTarget.value;
+        options={FILTER_STATUS_OPTIONS.map((status) => ({
+          value: status,
+          label: status === "all" ? "All" : status === "watched" ? "Watched" : status.toUpperCase(),
+        }))}
+        className="w-32"
+        onchange={(value) => {
           table
             .getColumn("status")
             ?.setFilterValue(value === "all" ? undefined : value);
         }}
-      >
-        {#each FILTER_STATUS_OPTIONS as status}
-          <option value={status}>Status: {status}</option>
-        {/each}
-      </select>
-      <select
-        class="h-8 min-w-36 rounded-none border border-[var(--border)] bg-[var(--background)] px-2 text-sm shadow-none"
-        aria-label="Watched with filter"
+      />
+      <NotchedSelect
+        id="movie-with-filter"
+        label="With"
         value={watchedWithFilter}
-        onchange={(event) => {
-          const value = event.currentTarget.value;
+        options={tableWatchedWithOptions.map((person) => ({ value: person, label: person === "all" ? "Anyone" : person }))}
+        className="w-36"
+        onchange={(value) => {
           table
             .getColumn("watchedWith")
             ?.setFilterValue(value === "all" ? undefined : value);
         }}
-      >
-        {#each tableWatchedWithOptions as person}
-          <option value={person}>
-            With: {person === "all" ? "anyone" : person}
-          </option>
-        {/each}
-      </select>
-      <select
-        class="h-8 w-full rounded-none border border-[var(--border)] bg-[var(--background)] px-2 text-sm md:hidden"
-        aria-label="Sort movies"
+      />
+      <NotchedSelect
+        id="movie-sort"
+        label="Sort"
         value={sorting()[0]?.id ?? "rank"}
-        onchange={(event) => setSorting([{ id: event.currentTarget.value, desc: false }])}
-      >
-        <option value="rank">Sort: preference</option>
-        <option value="title">Sort: title</option>
-        <option value="watchedOn">Sort: watched date</option>
-        <option value="language">Sort: language</option>
-        <option value="status">Sort: status</option>
-        <option value="watchedWith">Sort: watched with</option>
-      </select>
+        options={SORT_OPTIONS}
+        className="w-full md:hidden"
+        onchange={(value) => setSorting([{ id: value, desc: false }])}
+      />
     </div>
     <div class="flex items-center gap-3">
       {#if orderError}
