@@ -11,19 +11,19 @@ const links = [
 ---
 
 <header class="sticky top-0 z-10 border-b border-[var(--border)] bg-[color:color-mix(in_srgb,var(--background)_92%,white)] backdrop-blur">
-  <div class="flex min-h-14 flex-col items-start justify-center gap-2 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-0">
+  <div class="flex min-h-14 items-center justify-between gap-1 sm:gap-4">
     <a
       href="/"
-      class="select-none text-xl font-bold uppercase [font-family:Futura,'Futura_PT','Trebuchet_MS',sans-serif]"
+      class="shrink-0 select-none text-base font-bold uppercase sm:text-xl [font-family:Futura,'Futura_PT','Trebuchet_MS',sans-serif]"
     >
       MARKINO
     </a>
-    <div class="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start sm:gap-3">
-      <nav class="flex items-center gap-1 text-sm text-[var(--muted-foreground)]">
+    <div class="flex min-w-0 items-center gap-1 sm:gap-3">
+      <nav class="flex shrink-0 items-center text-[11px] text-[var(--muted-foreground)] sm:gap-1 sm:text-sm">
         {links.map((link) => (
           <a
             href={link.href}
-            class="px-2 py-1 hover:text-[var(--foreground)]"
+            class="px-1 py-1 hover:text-[var(--foreground)] sm:px-2"
           >
             {link.label}
           </a>

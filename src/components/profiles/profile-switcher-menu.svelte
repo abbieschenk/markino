@@ -65,7 +65,7 @@
 >
   <button
     type="button"
-    class="inline-flex h-8 items-center justify-center gap-1.5 rounded-none border border-[var(--input)] bg-[var(--background)] px-2 text-sm font-medium shadow-xs transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)] focus-visible:border-[var(--ring)] focus-visible:ring-[var(--ring)]/50 focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50"
+    class="inline-flex h-8 items-center justify-center gap-1 rounded-none border border-[var(--input)] bg-[var(--background)] px-1 text-xs font-medium shadow-xs transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)] focus-visible:border-[var(--ring)] focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 sm:gap-1.5 sm:px-2 sm:text-sm"
     aria-expanded={open}
     aria-haspopup="menu"
     onclick={() => {
@@ -76,7 +76,7 @@
     }}
   >
     {@render userCircleIcon()}
-    {currentUser?.handle ?? "Profile"}
+    <span class="max-w-12 truncate sm:max-w-none">{currentUser?.handle ?? "Profile"}</span>
   </button>
 
   {#if open}
