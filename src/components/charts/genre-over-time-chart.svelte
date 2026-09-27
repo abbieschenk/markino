@@ -143,9 +143,9 @@
   }
 </script>
 
-<div class="relative grid gap-2">
+<div class="relative grid min-w-0 grid-cols-1 gap-2">
   {#if hasData}
-    <div class="relative" data-genre-heatmap>
+    <div class="relative min-w-0" data-genre-heatmap>
       <div class="overflow-x-auto pb-1">
         <div class="grid min-w-max gap-px text-xs" style={`grid-template-columns: ${gridTemplateColumns};`}>
           <div aria-hidden="true"></div>
