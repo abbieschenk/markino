@@ -82,6 +82,7 @@
   let tableData = $state<MovieLedgerEntry[]>([]);
   let titleSearch = $state("");
   let debouncedTitleSearch = $state("");
+  let filtersOpen = $state(false);
   let draggedMovieId = $state<string | null>(null);
   let dropTarget = $state<DropTarget | null>(null);
   let splicedMovieId = $state<string | null>(null);
@@ -376,6 +377,13 @@
     column?.toggleSorting(current === "asc");
   }
 
+  function clearTableFilters() {
+    titleSearch = "";
+    debouncedTitleSearch = "";
+    setColumnFilters([]);
+    setSorting([{ id: "rank", desc: false }]);
+  }
+
   function isActiveEditTarget(
     entry: EditableMovieEntry,
     field: EditableMovieEntryField,
@@ -621,71 +629,95 @@
 <section
   class="flex h-full min-h-0 min-w-0 flex-col overflow-hidden border border-[var(--border)] bg-white/40"
 >
-  <div
-    class="flex flex-col gap-3 border-b border-[var(--border)] px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
-  >
-    <div class="flex min-w-0 flex-wrap gap-2">
-      <NotchedInput
-        id="movie-title-table-search"
-        label="Search titles"
-        type="search"
-        bind:value={titleSearch}
-        className="w-full sm:w-56"
-      />
-      <NotchedSelect
-        id="movie-status-filter"
-        label="Status"
-        value={statusFilter}
-        options={FILTER_STATUS_OPTIONS.map((status) => ({
-          value: status,
-          label: status === "all" ? "All" : status === "watched" ? "Watched" : status.toUpperCase(),
-        }))}
-        className="w-32"
-        onchange={(value) => {
-          table
-            .getColumn("status")
-            ?.setFilterValue(value === "all" ? undefined : value);
-        }}
-      />
-      <NotchedSelect
-        id="movie-with-filter"
-        label="With"
-        value={watchedWithFilter}
-        options={tableWatchedWithOptions.map((person) => ({ value: person, label: person === "all" ? "Anyone" : person }))}
-        className="w-36"
-        onchange={(value) => {
-          table
-            .getColumn("watchedWith")
-            ?.setFilterValue(value === "all" ? undefined : value);
-        }}
-      />
-      <NotchedSelect
-        id="movie-sort"
-        label="Sort"
-        value={sorting()[0]?.id ?? "rank"}
-        options={SORT_OPTIONS}
-        className="w-full md:hidden"
-        onchange={(value) => setSorting([{ id: value, desc: false }])}
-      />
-    </div>
-    <div class="flex items-center gap-3">
-      {#if orderError}
-        <div class="text-xs text-destructive">{orderError}</div>
-      {/if}
-      {#if isSavingOrder}
-        <div class="text-xs text-muted-foreground">Saving order</div>
-      {/if}
-      <div class="text-xs text-muted-foreground">
-        {visibleRows.length} of {tableData.length} movies
+  <div class="flex flex-col gap-2 border-b border-[var(--border)] px-3 py-3">
+    <div class="flex min-w-0 items-center gap-2">
+      <div class="flex min-w-0 flex-1 items-center">
+        <NotchedInput
+          id="movie-title-table-search"
+          label="Search"
+          type="search"
+          bind:value={titleSearch}
+          className="min-w-0 flex-1"
+        />
+        <button
+          type="button"
+          class="relative inline-flex size-11 shrink-0 items-center justify-center border border-[var(--border)] text-foreground hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          aria-label="Filters"
+          aria-expanded={filtersOpen}
+          aria-controls="movie-table-filters"
+          onclick={() => (filtersOpen = !filtersOpen)}
+        >
+          {@render filterIcon()}
+          {#if columnFilters().length > 0}
+            <span class="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-foreground" aria-label="Active filters"></span>
+          {/if}
+        </button>
       </div>
       <button
         type="button"
-        class="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+        class="ml-auto inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
         onclick={openAddDialog}
       >
         Add
       </button>
     </div>
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+      <span>{visibleRows.length} of {tableData.length} movies</span>
+      {#if isSavingOrder}
+        <span>Saving order</span>
+      {/if}
+      {#if orderError}
+        <span class="text-destructive">{orderError}</span>
+      {/if}
+    </div>
+    {#if filtersOpen}
+      <div
+        id="movie-table-filters"
+        class="grid w-full max-w-80 gap-3 border border-[var(--border)] bg-[var(--background)] p-3 shadow-sm sm:w-80"
+      >
+        <div class="grid min-w-0 grid-cols-2 gap-2">
+          <NotchedSelect
+            id="movie-status-filter"
+            label="Status"
+            value={statusFilter}
+            options={FILTER_STATUS_OPTIONS.map((status) => ({
+              value: status,
+              label: status === "all" ? "All" : status === "watched" ? "Watched" : status.toUpperCase(),
+            }))}
+            onchange={(value) => {
+              table
+                .getColumn("status")
+                ?.setFilterValue(value === "all" ? undefined : value);
+            }}
+          />
+          <NotchedSelect
+            id="movie-with-filter"
+            label="With"
+            value={watchedWithFilter}
+            options={tableWatchedWithOptions.map((person) => ({ value: person, label: person === "all" ? "Anyone" : person }))}
+            onchange={(value) => {
+              table
+                .getColumn("watchedWith")
+                ?.setFilterValue(value === "all" ? undefined : value);
+            }}
+          />
+        </div>
+        <NotchedSelect
+          id="movie-sort"
+          label="Sort"
+          value={sorting()[0]?.id ?? "rank"}
+          options={SORT_OPTIONS}
+          onchange={(value) => setSorting([{ id: value, desc: false }])}
+        />
+        <button
+          type="button"
+          class="justify-self-end px-1 text-xs font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          onclick={clearTableFilters}
+        >
+          Clear
+        </button>
+      </div>
+    {/if}
   </div>
   <div
     class="min-h-0 flex-1 overflow-auto overscroll-contain"
@@ -1185,6 +1217,21 @@
     </div>
   </div>
 {/if}
+
+{#snippet filterIcon()}
+  <svg
+    aria-hidden="true"
+    class="size-4"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.75"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M4 7h16M7 12h10m-7 5h4" />
+  </svg>
+{/snippet}
 
 {#snippet sortButton(columnId: string, label: string)}
   <button
