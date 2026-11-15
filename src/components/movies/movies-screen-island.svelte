@@ -72,6 +72,7 @@
   ];
   const TITLE_SEARCH_DEBOUNCE_MS = 300;
   const SPLICE_DURATION_MS = 650;
+  const TABLE_VIEW_STORAGE_KEY = "markino.movieTableView";
 
   let {
     defaultWatchedWith,
@@ -86,6 +87,7 @@
   let titleSearch = $state("");
   let debouncedTitleSearch = $state("");
   let filtersOpen = $state(false);
+  let tableViewRestored = $state(false);
   let draggedMovieId = $state<string | null>(null);
   let dropTarget = $state<DropTarget | null>(null);
   let splicedMovieId = $state<string | null>(null);
@@ -221,7 +223,70 @@
   });
 
   onMount(() => {
+    restoreTableView();
+    tableViewRestored = true;
     void loadMovies();
+  });
+
+  function restoreTableView() {
+    try {
+      const stored = window.localStorage.getItem(
+        `${TABLE_VIEW_STORAGE_KEY}.${userId}`,
+      );
+      if (!stored) return;
+
+      const view: unknown = JSON.parse(stored);
+      if (!view || typeof view !== "object") return;
+
+      const { search, status, watchedWith, sort } = view as Record<
+        string,
+        unknown
+      >;
+      if (typeof search === "string") titleSearch = search;
+
+      const filters: ColumnFiltersState = [];
+      if (
+        FILTER_STATUS_OPTIONS.includes(status as WatchStatus | "all") &&
+        status !== "all"
+      ) {
+        filters.push({ id: "status", value: status });
+      }
+      if (
+        typeof watchedWith === "string" &&
+        watchedWith !== "all" &&
+        watchedWith !== ""
+      ) {
+        filters.push({ id: "watchedWith", value: watchedWith });
+      }
+      setColumnFilters(filters);
+
+      if (SORT_OPTIONS.some((option) => option.value === sort)) {
+        setSorting([{ id: sort as string, desc: false }]);
+      }
+    } catch (error) {
+      console.warn("Failed to restore movie table view", error);
+    }
+  }
+
+  $effect(() => {
+    if (!tableViewRestored) return;
+
+    const filters = columnFilters();
+    const view = {
+      search: titleSearch,
+      status: filters.find((filter) => filter.id === "status")?.value ?? "all",
+      watchedWith: filters.find((filter) => filter.id === "watchedWith")?.value ?? "all",
+      sort: sorting()[0]?.id ?? "rank",
+    };
+
+    try {
+      window.localStorage.setItem(
+        `${TABLE_VIEW_STORAGE_KEY}.${userId}`,
+        JSON.stringify(view),
+      );
+    } catch (error) {
+      console.warn("Failed to save movie table view", error);
+    }
   });
 
   async function loadMovies() {
