@@ -238,7 +238,7 @@
       const view: unknown = JSON.parse(stored);
       if (!view || typeof view !== "object") return;
 
-      const { search, status, watchedWith, sort } = view as Record<
+      const { search, status, watchedWith, sort, sortDesc } = view as Record<
         string,
         unknown
       >;
@@ -261,7 +261,7 @@
       setColumnFilters(filters);
 
       if (SORT_OPTIONS.some((option) => option.value === sort)) {
-        setSorting([{ id: sort as string, desc: false }]);
+        setSorting([{ id: sort as string, desc: sortDesc === true }]);
       }
     } catch (error) {
       console.warn("Failed to restore movie table view", error);
@@ -277,6 +277,7 @@
       status: filters.find((filter) => filter.id === "status")?.value ?? "all",
       watchedWith: filters.find((filter) => filter.id === "watchedWith")?.value ?? "all",
       sort: sorting()[0]?.id ?? "rank",
+      sortDesc: sorting()[0]?.desc ?? false,
     };
 
     try {
