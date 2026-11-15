@@ -10,7 +10,7 @@
     "lint": "eslint",
     "typecheck": "astro sync && tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:local": "docker compose up -d --wait postgres",
+    "db:local": "docker compose -f docker/docker-compose.common.yml -f docker/docker-compose.local.yml up -d --wait postgres",
     "db:migrate": "drizzle-kit migrate",
     "db:setup": "pnpm run db:local && pnpm run db:migrate",
     "db:studio": "drizzle-kit studio"

@@ -1,0 +1,6 @@
+services:
+  app:
+    image: ghcr.io/abbieschenk/markino:main
+
+  migrate:
+    image: ghcr.io/abbieschenk/markino:main

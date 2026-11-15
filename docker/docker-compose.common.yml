@@ -1,8 +1,9 @@
+name: markino
+
 services:
   app:
-    build:
-      context: .
     container_name: markino-app
+    restart: unless-stopped
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -13,8 +14,6 @@ services:
       TMDB_ACCESS_TOKEN: ${TMDB_ACCESS_TOKEN:-}
 
   migrate:
-    build:
-      context: .
     command: ["./node_modules/.bin/drizzle-kit", "migrate"]
     depends_on:
       postgres:
@@ -25,8 +24,7 @@ services:
   postgres:
     image: postgres:17-alpine
     container_name: markino-postgres
-    ports:
-      - "127.0.0.1:54322:5432"
+    restart: unless-stopped
     environment:
       POSTGRES_DB: markino
       POSTGRES_USER: markino

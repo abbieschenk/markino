@@ -55,10 +55,10 @@ Docker Compose reads `TMDB_ACCESS_TOKEN` from the shell or a root-level `.env` f
 export TMDB_ACCESS_TOKEN=your-tmdb-read-access-token
 ```
 
-Run the app and database together:
+Run the app and database together with the local build:
 
 ```bash
-docker compose up --build
+docker compose -f docker/docker-compose.common.yml -f docker/docker-compose.local.yml up --build
 ```
 
 The Astro app is exposed on [http://localhost:3000](http://localhost:3000). Postgres stays on the Compose network for the app and is also bound to `127.0.0.1:54322` for local Drizzle commands. Compose waits for Postgres, runs all pending Drizzle migrations, and starts the app only after the migrations succeed.
@@ -66,10 +66,18 @@ The Astro app is exposed on [http://localhost:3000](http://localhost:3000). Post
 If port `3000` is already in use, set `PORT` to expose the app on a different host port:
 
 ```bash
-PORT=3001 docker compose up --build
+PORT=3001 docker compose -f docker/docker-compose.common.yml -f docker/docker-compose.local.yml up --build
 ```
 
 The app will then be available at [http://localhost:3001](http://localhost:3001). The container continues to use port `3000` internally.
+
+For a server on your local network, set `TMDB_ACCESS_TOKEN` in the server's `.env` file, then pull and start the published image:
+
+```bash
+docker compose -f docker/docker-compose.common.yml -f docker/docker-compose.server.yml up -d --pull always
+```
+
+The server configuration uses `ghcr.io/abbieschenk/markino:main` for both the app and the migration job. It publishes the app on port `3000` (or `PORT` if set) and keeps Postgres on the Compose network. The app and Postgres restart after a reboot; the migration job runs when the stack is started. If the GitHub package is private, log in to `ghcr.io` on the server before pulling.
 
 ## Local Database
 
@@ -83,7 +91,7 @@ DATABASE_URL=postgres://markino:markino@localhost:54322/markino
 
 The Compose setup is non-destructive. Data is stored in the persistent Docker volume `markino-postgres-data`, so restarting the container keeps existing data.
 
-To change the local database defaults, update `docker-compose.yml` and keep `.env.local` in sync before running `pnpm run db:local`:
+To change the local database defaults, update `docker/docker-compose.common.yml` (and `docker/docker-compose.local.yml` if changing the host port) and keep `.env.local` in sync before running `pnpm run db:local`:
 
 ```bash
 DATABASE_URL=postgres://markino:markino@localhost:54322/markino
